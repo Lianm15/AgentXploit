@@ -4,3 +4,5 @@ pydantic
 pydantic-settings
 google-generativeai
 httpx
+python-dotenv
+google-genai
