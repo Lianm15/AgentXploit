@@ -3,3 +3,5 @@ uvicorn
 pydantic
 pydantic-settings
 httpx
+python-dotenv
+google-genai
