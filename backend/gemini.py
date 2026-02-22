@@ -51,5 +51,5 @@ def run_gemini_attack(prompt: str) -> str:
             temperature=1.0,        #0.0 = robotic/safe, 2.0 = unpredictable
         )
     )
-
+    
     return response.text  #the actual text Gemini responded with

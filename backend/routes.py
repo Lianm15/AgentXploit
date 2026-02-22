@@ -1,7 +1,23 @@
 from fastapi import APIRouter, HTTPException
-from logic import AttackConfig, AttackResult, process_attack
+from logic import AttackConfig, AttackResult, process_attack, initialize_test
+from pydantic import BaseModel
+from typing import List   
 
-router = APIRouter()
+router = APIRouter(prefix="/api") 
+
+#the request body for initialize
+class InitializeRequest(BaseModel):
+    target_model: str
+    success_criteria: str
+    max_attempts: int
+
+@router.post("/initialize")
+async def initialize(request: InitializeRequest):
+    try:
+        return initialize(request.target_model, request.success_criteria, request.max_attempts)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 ######### example endpoint to execute an attack #################
 @router.post("/attacks/run", response_model=AttackResult)
