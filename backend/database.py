@@ -10,9 +10,9 @@ def create_tables():
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
-            session_id TEXT PRIMARY KEY,
-            target_model TEXT NOT NULL,
-            success_criteria TEXT NOT NULL,
+            session_id VARCHAR(50) PRIMARY KEY,
+            target_model VARCHAR(50) NOT NULL,
+            success_criteria VARCHAR(200) NOT NULL,
             max_attempts INTEGER NOT NULL
         )
     """)

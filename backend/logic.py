@@ -1,23 +1,22 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 from gemini import run_gemini_attack  #connects to gemini
 from database import get_connection   #connects to sqlite
 import uuid                           #generates session IDs
-import json                           #converts list to string for sqlite
 
 ################### example data models and logic for processing attacks ############################
 class AttackConfig(BaseModel):
     target_llm_id: str
     technique: str
     custom_prompt: Optional[str] = None
-    success_criteria: List[str]
+    success_criteria: str
 
 class AttackResult(BaseModel):
     success: bool
     output: str
     technique_used: str
 
-def initialize_test(target_model: str, success_criteria: List[str], max_attempts: int) -> dict:
+def initialize(target_model: str, success_criteria: List[str], max_attempts: int) -> dict:
     session_id = str(uuid.uuid4())  #generates unique ID 
 
     conn = get_connection()
@@ -30,7 +29,7 @@ def initialize_test(target_model: str, success_criteria: List[str], max_attempts
     """, (
         session_id,
         target_model,
-        json.dumps(success_criteria),  #converts ["harmful", "ignore"] to '["harmful", "ignore"]'
+        success_criteria, 
         max_attempts
     ))
 
@@ -38,11 +37,7 @@ def initialize_test(target_model: str, success_criteria: List[str], max_attempts
     conn.close()
 
     return {
-        "session_id": session_id,
-        "target_model": target_model,
-        "success_criteria": success_criteria,
-        "max_attempts": max_attempts,
-        "status": "initialized"
+        "session_id": session_id
     }
 
 def process_attack(config: AttackConfig) -> AttackResult:

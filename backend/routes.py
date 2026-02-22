@@ -8,13 +8,13 @@ router = APIRouter(prefix="/api")
 #the request body for initialize
 class InitializeRequest(BaseModel):
     target_model: str
-    success_criteria: List[str]
+    success_criteria: str
     max_attempts: int
 
-@router.post("/test/initialize")
+@router.post("/initialize")
 async def initialize(request: InitializeRequest):
     try:
-        return initialize_test(request.target_model, request.success_criteria, request.max_attempts)
+        return initialize(request.target_model, request.success_criteria, request.max_attempts)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
