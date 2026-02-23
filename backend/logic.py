@@ -4,7 +4,6 @@ from gemini import run_gemini_attack  #connects to gemini
 from database import get_connection   #connects to sqlite
 import uuid                           #generates session IDs
 
-################### example data models and logic for processing attacks ############################
 class AttackConfig(BaseModel):
     target_llm_id: str
     technique: str
@@ -40,14 +39,27 @@ def initialize(target_model: str, success_criteria: List[str], max_attempts: int
         "session_id": session_id
     }
 
-def process_attack(config: AttackConfig) -> AttackResult:
-    # כאן תכנס הלוגיקה מול Gemini והמודל המקומי
-    if config.technique == "semantic_shift":
-        output = run_gemini_attack(config.custom_prompt or "default semantic shift prompt")
-        return AttackResult(success=True, output=output, technique_used=config.technique)
-    
-    elif config.technique == "adversarial_gaslighting":
-        return AttackResult(success=True, output="Gaslighted output", technique_used=config.technique)
-    
-    raise ValueError("Unknown technique")
-#####################################################################################################
+def add_message(session_id: str, sender: str, content: str):
+    """Add a message to the transcript (sender: 'gemini' or 'target_llm')"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO messages (session_id, sender, content)
+        VALUES (?, ?, ?)
+    """, (session_id, sender, content))
+    conn.commit()
+    conn.close()
+
+def get_messages(session_id: str):
+    """Get all messages for a session ordered by timestamp"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT sender, content, timestamp
+        FROM messages
+        WHERE session_id = ?
+        ORDER BY timestamp ASC
+    """, (session_id,))
+    messages = cursor.fetchall()
+    conn.close()
+    return [dict(msg) for msg in messages]
