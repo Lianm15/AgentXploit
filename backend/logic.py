@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from gemini import run_gemini_attack  #connects to gemini
 from database import get_connection   #connects to sqlite
 import uuid                           #generates session IDs
@@ -15,7 +15,27 @@ class AttackResult(BaseModel):
     output: str
     technique_used: str
 
-def initialize(target_model: str, success_criteria: List[str], max_attempts: int) -> dict:
+class Message(BaseModel):
+    """Represents a single message in the transcript"""
+    sender: str  # 'gemini' or 'target_llm'
+    content: str
+    timestamp: str
+
+class Transcript(BaseModel):
+    """Represents the full transcript for a session"""
+    session_id: str
+    transcript: List[Message]
+    total_messages: int
+
+class InitializeResponse(BaseModel):
+    """Response payload for session initialization"""
+    session_id: str
+
+class HealthStatus(BaseModel):
+    """Health check response"""
+    status: str
+
+def initialize(target_model: str, success_criteria: List[str], max_attempts: int) -> InitializeResponse:
     session_id = str(uuid.uuid4())  #generates unique ID 
 
     conn = get_connection()
@@ -35,11 +55,9 @@ def initialize(target_model: str, success_criteria: List[str], max_attempts: int
     conn.commit()
     conn.close()
 
-    return {
-        "session_id": session_id
-    }
+    return InitializeResponse(session_id=session_id)
 
-def add_message(session_id: str, sender: str, content: str):
+def add_message(session_id: str, sender: str, content: str) -> None:
     """Add a message to the transcript (sender: 'gemini' or 'target_llm')"""
     conn = get_connection()
     cursor = conn.cursor()
@@ -50,7 +68,7 @@ def add_message(session_id: str, sender: str, content: str):
     conn.commit()
     conn.close()
 
-def get_messages(session_id: str):
+def get_messages(session_id: str) -> List[Message]:
     """Get all messages for a session ordered by timestamp"""
     conn = get_connection()
     cursor = conn.cursor()
@@ -62,4 +80,4 @@ def get_messages(session_id: str):
     """, (session_id,))
     messages = cursor.fetchall()
     conn.close()
-    return [dict(msg) for msg in messages]
+    return [Message(sender=msg['sender'], content=msg['content'], timestamp=msg['timestamp']) for msg in messages]

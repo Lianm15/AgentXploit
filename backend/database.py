@@ -1,11 +1,11 @@
 import sqlite3
 
-def get_connection():
+def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect("agentxploit.db")
     conn.row_factory = sqlite3.Row
     return conn
 
-def create_tables():
+def create_tables() -> None:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
