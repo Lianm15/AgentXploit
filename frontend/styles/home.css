@@ -1,0 +1,121 @@
+/* ── Background ── */
+.stApp {
+    background: linear-gradient(135deg, #0f0c29, #1a1a3e, #24243e);
+    min-height: 100vh;
+}
+
+.block-container {
+    max-width: 680px !important;
+    margin: 0 auto !important;
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+}
+
+/* ── Header ── */
+.header-badge {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.badge {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+}
+
+.page-title {
+    text-align: center;
+    font-size: 2.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #ffffff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 0.4rem 0;
+}
+
+.page-subtitle {
+    text-align: center;
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-bottom: 2.4rem;
+}
+
+/* ── Form field labels ── */
+.field-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e5e7eb;
+    margin-bottom: 0.15rem;
+    letter-spacing: 0.01em;
+}
+
+.field-desc {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 0.55rem;
+}
+
+.card-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    margin: 1.6rem 0;
+}
+
+/* ── Inputs ── */
+div[data-baseweb="select"] > div,
+div[data-baseweb="textarea"] > div,
+div[data-baseweb="input"] > div {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="textarea"] > div:focus-within,
+div[data-baseweb="input"] > div:focus-within {
+    border-color: rgba(99, 102, 241, 0.6) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] input,
+div[data-baseweb="textarea"] textarea,
+div[data-baseweb="input"] input {
+    color: #f9fafb !important;
+}
+
+/* ── Submit button ── */
+div[data-testid="stFormSubmitButton"] > button {
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    width: 100% !important;
+    padding: 0.7rem 3rem !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-testid="stFormSubmitButton"] > button:hover {
+    background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.55) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ── Disclaimer ── */
+.disclaimer {
+    text-align: center;
+    font-size: 0.78rem;
+    color: #374151;
+    margin-top: 0.6rem;
+}
