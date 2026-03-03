@@ -9,14 +9,6 @@ def create_tables() -> None:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS sessions (
-            session_id VARCHAR(50) PRIMARY KEY,
-            target_model VARCHAR(50) NOT NULL,
-            success_criteria VARCHAR(200) NOT NULL,
-            max_attempts INTEGER NOT NULL
-        )
-    """)
-    cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id VARCHAR(50) NOT NULL,
@@ -25,6 +17,16 @@ def create_tables() -> None:
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (session_id) REFERENCES sessions(session_id)
         )
+    """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS sessions (
+        session_id VARCHAR(50) PRIMARY KEY,
+        target_model VARCHAR(50) NOT NULL,
+        success_criteria VARCHAR(200) NOT NULL,
+        max_attempts INTEGER NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'initialized',
+        started_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
     """)
     conn.commit()
     conn.close()
