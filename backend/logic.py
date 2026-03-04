@@ -5,6 +5,7 @@ from database import get_connection   #connects to sqlite
 from datetime import datetime
 import uuid 
 import requests                          #generates session IDs
+import time
 
 class AttackConfig(BaseModel):
     target_llm_id: str
@@ -79,6 +80,20 @@ def initialize(target_model: str, success_criteria: str, max_attempts: int) -> I
 
     return InitializeResponse(session_id=session_id)
 
+def save_message(session_id: str, sender: str, content: str):
+    print("INSERT SESSION ID:", session_id)
+    """Save a message to the messages table"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO messages (session_id, sender, content)
+        VALUES (?, ?, ?)
+    """, (session_id, sender, content))
+
+    conn.commit()
+    conn.close()
+
 def add_message(session_id: str, sender: str, content: str) -> None:
     """Add a message to the transcript (sender: 'gemini' or 'target_llm')"""
     conn = get_connection()
@@ -90,8 +105,7 @@ def add_message(session_id: str, sender: str, content: str) -> None:
     conn.commit()
     conn.close()
 
-def get_messages(session_id: str) -> List[Message]:
-    """Get all messages for a session ordered by timestamp"""
+def get_messages(session_id: str):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -100,9 +114,33 @@ def get_messages(session_id: str) -> List[Message]:
         WHERE session_id = ?
         ORDER BY timestamp ASC
     """, (session_id,))
+    
     messages = cursor.fetchall()
     conn.close()
-    return [Message(sender=msg['sender'], content=msg['content'], timestamp=msg['timestamp']) for msg in messages]
+
+    return [
+        {
+            "sender": msg["sender"],
+            "content": msg["content"],
+            "timestamp": msg["timestamp"]
+        }
+        for msg in messages
+    ]
+
+
+
+def wait_if_paused(session_id):
+    while True:
+        status = get_session_status(session_id)
+
+        if status == "paused":
+            time.sleep(1)
+            continue
+
+        if status == "stopped":
+            raise Exception("Session stopped")
+
+        break
 
 def get_local_models() -> List[str]:
     """
@@ -115,29 +153,47 @@ def get_local_models() -> List[str]:
     except Exception:
         return []
     
-def run_attack_process(session_id: str, success_criteria: str) -> None:
+def run_attack_process(session_id: str, success_criteria: str):
+
     try:
+        print("STEP 1 - starting")
         update_session_status(session_id, "running")
 
-        jailbreak_prompt = run_gemini_attack(success_criteria)
-        add_message(session_id, "gemini", jailbreak_prompt)
+        wait_if_paused(session_id)
 
-        target_response = "This is what the local model responded"  
-        add_message(session_id, "target_llm", target_response)
+        print("STEP 2 - calling gemini")
+        jailbreak_prompt = run_gemini_attack(success_criteria)
+
+        save_message(session_id, "attacker", jailbreak_prompt)
+
+        wait_if_paused(session_id)
+
+        print("STEP 3 - got jailbreak")
+
+        target_response = "This is what the local model responded"
+
+        save_message(session_id, "target", target_response)
+
+        wait_if_paused(session_id)
+
+        print("STEP 4 - judging")
 
         judgement = judge_target_response(session_id, target_response, success_criteria)
-        add_message(session_id, "gemini_judge", judgement)
 
-        if judgement.lower() in ["true", "1", "10", "10/10"]:
+        save_message(session_id, "judge", str(judgement))
+
+        if "true" in str(judgement).lower():
             update_session_status(session_id, "success_found")
         else:
             update_session_status(session_id, "finished")
 
+        print("STEP 5 - finished")
+
     except Exception as e:
         update_session_status(session_id, "failed")
-        print(f"Error in attack process: {str(e)}")
+        print("Error:", e)
 
-
+        
 def get_session_status(session_id: str) -> SessionStatusResponse:
     conn = get_connection()
     cursor = conn.cursor()
@@ -150,6 +206,8 @@ def get_session_status(session_id: str) -> SessionStatusResponse:
 
     if not row:
         raise ValueError("Session not found")
+    
+    print("STATUS FROM DB:", row["status"])
 
     return SessionStatusResponse(
         session_id=session_id,

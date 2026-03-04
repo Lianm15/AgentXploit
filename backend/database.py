@@ -1,8 +1,10 @@
 import sqlite3
+import os
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect("agentxploit.db")
     conn.row_factory = sqlite3.Row
+    print("DB PATH:", os.path.abspath("database.db"))
     return conn
 
 def create_tables() -> None:

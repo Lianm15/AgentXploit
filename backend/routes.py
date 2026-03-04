@@ -32,26 +32,28 @@ async def initialize(request: InitializeRequest) -> InitializeResponse:
 @router.get("/{session_id}/messages", response_model=Transcript)
 async def get_transcript(session_id: str) -> Transcript:
     """
-    Fetches the full transcript for a session, distinguishing between:
-    - AgentXploit (Gemini) prompts
-    - Target (Local LLM) responses
+    Fetches the full transcript for a session.
     """
+
     try:
         messages = get_messages(session_id)
-        
+
+        # ❗ לא להחזיר 404
         if not messages:
-            raise HTTPException(status_code=404, detail=f"No messages found for session {session_id}")
-        
+            messages = []
+
         return Transcript(
             session_id=session_id,
             transcript=messages,
             total_messages=len(messages)
         )
-    except HTTPException:
-        raise
+
     except Exception as e:
         logger.error(f"Error retrieving messages for session {session_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error while retrieving messages")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error while retrieving messages"
+        )
     
 @router.get("/models", response_model=ModelsResponse)
 async def list_models() -> ModelsResponse:
