@@ -1,10 +1,10 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from gemini import run_gemini_attack  #connects to gemini
-from database import get_connection   #connects to sqlite
+from gemini import run_gemini_attack  
+from database import get_connection   
 from datetime import datetime
 import uuid 
-import requests                          #generates session IDs
+import requests                         
 import time
 
 class AttackConfig(BaseModel):
@@ -20,7 +20,7 @@ class AttackResult(BaseModel):
 
 class Message(BaseModel):
     """Represents a single message in the transcript"""
-    sender: str  # 'gemini' or 'target_llm'
+    sender: str  
     content: str
     timestamp: str
 
@@ -59,7 +59,7 @@ class FinishTestResponse(BaseModel):
     elapsed_seconds: float
 
 def initialize(target_model: str, success_criteria: str, max_attempts: int) -> InitializeResponse:
-    session_id = str(uuid.uuid4())  #generates unique ID 
+    session_id = str(uuid.uuid4())  
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -193,7 +193,7 @@ def run_attack_process(session_id: str, success_criteria: str):
         update_session_status(session_id, "failed")
         print("Error:", e)
 
-        
+
 def get_session_status(session_id: str) -> SessionStatusResponse:
     conn = get_connection()
     cursor = conn.cursor()
@@ -290,10 +290,10 @@ OR
 Do NOT include any explanations or extra text.
 """
 
-    # run Gemini with Judge prompt
+   
     judgement = run_gemini_attack(JUDGE_PROMPT)
 
-    # Optional: אם Gemini מחזירה קצת טקסט, ניקוי
+   
     judgement = judgement.strip()
 
     return judgement

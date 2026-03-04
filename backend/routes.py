@@ -14,7 +14,6 @@ import logging
 router = APIRouter(prefix="/api") 
 logger = logging.getLogger("backend.routes")
 
-#the request body for initialize
 class InitializeRequest(BaseModel):
     target_model: str
     success_criteria: str
@@ -38,7 +37,6 @@ async def get_transcript(session_id: str) -> Transcript:
     try:
         messages = get_messages(session_id)
 
-        # ❗ לא להחזיר 404
         if not messages:
             messages = []
 
