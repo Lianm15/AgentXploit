@@ -235,7 +235,7 @@ Do NOT include any explanations or extra text.
     # run Gemini with Judge prompt
     judgement = run_gemini_attack(JUDGE_PROMPT)
 
-    # Optional: אם Gemini מחזירה קצת טקסט, ניקוי
+    # Optional: If Gemini returns some text, cleanup
     judgement = judgement.strip()
 
     return judgement
@@ -270,7 +270,7 @@ def get_finish_test_data(session_id: str) -> FinishTestResponse:
     breaking_prompt = ""
     for m in messages:
         if m["sender"] == "gemini_judge" and m["content"].lower() in ["true", "1", "10", "10/10"]:
-            # ההודעה הקודמת של Gemini היא ה-prompt שגרם ל-success
+            # The previous Gemini message is the prompt that caused success.
             idx = messages.index(m)
             if idx > 0 and messages[idx-1]["sender"] == "gemini":
                 breaking_prompt = messages[idx-1]["content"]
