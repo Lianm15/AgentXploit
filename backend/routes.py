@@ -8,7 +8,8 @@ from fastapi import BackgroundTasks
 from logic import run_attack_process
 from logic import SessionStatusResponse, get_session_status
 from logic import ActionRequest, ActionResponse, handle_session_action
-from logic import FinishTestResponse, get_finish_test_data
+from logic import FinishTestResponse, get_tests_summary
+from logic import EvaluateRequest, EvaluateResponse, evaluate_target_response
 import logging
 
 router = APIRouter(prefix="/api") 
@@ -30,10 +31,6 @@ async def initialize(request: InitializeRequest) -> InitializeResponse:
 
 @router.get("/{session_id}/messages", response_model=Transcript)
 async def get_transcript(session_id: str) -> Transcript:
-    """
-    Fetches the full transcript for a session.
-    """
-
     try:
         messages = get_messages(session_id)
 
@@ -100,8 +97,8 @@ async def get_status(session_id: str) -> SessionStatusResponse:
         raise HTTPException(status_code=500, detail="Failed to retrieve status")
     
 
-@router.post("/{session_id}/action", response_model=ActionResponse)
-async def session_action(session_id: str, request: ActionRequest) -> ActionResponse:
+@router.post("/{session_id}/control", response_model=ActionResponse)
+async def session_control(session_id: str, request: ActionRequest) -> ActionResponse:
     try:
         return handle_session_action(session_id, request.action)
 
@@ -113,12 +110,22 @@ async def session_action(session_id: str, request: ActionRequest) -> ActionRespo
         raise HTTPException(status_code=500, detail="Failed to process action")
     
 
-@router.get("/{session_id}/finish", response_model=FinishTestResponse)
+@router.get("/{session_id}/summary", response_model=FinishTestResponse)
 async def finish_test(session_id: str) -> FinishTestResponse:
     try:
-        return get_finish_test_data(session_id)
+        return get_tests_summary(session_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error finishing test for {session_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve finish test data")
+        raise HTTPException(status_code=500, detail="Failed to retrieve finish test data") 
+
+@router.post("/{session_id}/evaluate", response_model=EvaluateResponse)
+async def evaluate(session_id: str, request: EvaluateRequest) -> EvaluateResponse:
+    try:
+        return evaluate_target_response(session_id, request.target_response)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error evaluating response for {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to evaluate response")
