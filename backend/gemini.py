@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from google.generativeai import types
 
-load_dotenv()  # קורא את .env
+load_dotenv()  #reads the .env file and loads GEMINI_API_KEY
 
 # Configure the API key globally
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
