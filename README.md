@@ -1,88 +1,134 @@
 # AgentXploit
 
-A FastAPI-based application for agent-driven security exploitation and analysis.
+AgentXploit is a Python project with:
+- a FastAPI backend (`backend/`)
+- a Streamlit frontend (`frontend/`)
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
-- Python 3.8 or higher
-- pip (Python package manager)
+Install these on your PC before running the project:
 
-## Setup Instructions
+1. Python 3.10+ (3.11 recommended)
+2. `pip`
+3. Ollama (for local model listing via `http://localhost:11434`)
+4. A Gemini API key (Google AI Studio)
 
-### 1. Create a Virtual Environment
+## Project Structure
 
-#### On Windows (Command Prompt or PowerShell):
-```bash
-python -m venv venv
-venv\Scripts\activate
+```text
+AgentXploit/
+├── backend/
+│   ├── main.py
+│   ├── routes.py
+│   ├── logic.py
+│   ├── gemini.py
+│   └── database.py
+├── frontend/
+│   ├── app.py
+│   ├── api_client.py
+│   └── styles/
+├── requirements.txt
+└── README.md
 ```
 
-#### On macOS/Linux:
-```bash
-python3 -m venv venv
-source venv/bin/activate
+## Setup
+
+Run these commands from the project root (`AgentXploit/`).
+
+### 1) Create and activate virtual environment
+
+#### Windows (PowerShell)
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 2. Install Requirements
+#### Windows (Command Prompt)
+```bat
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
 
-Once the virtual environment is activated, install the required dependencies:
+#### macOS/Linux
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 2) Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-This will install:
-- FastAPI
-- Uvicorn (ASGI server)
-- Pydantic
-- Pydantic Settings
-- Google Generative AI
-- HTTPX
+### 3) Create environment file for backend
 
-### 3. Configure Environment Variables
+Create a file at `backend/.env` with:
 
-Create a `.env` file in the `app/` directory with any necessary environment variables (if not already present).
-
-### 4. Run the FastAPI Application
-
-Start the FastAPI server using Uvicorn:
-
-```bash
-uvicorn app.main:app --reload
+```env
+GEMINI_API_KEY=your_actual_api_key_here
 ```
 
-The server will start at `http://localhost:8000`
+## Run the App (Use 2 Terminals)
 
-#### Useful flags:
-- `--reload`: Auto-reload on code changes (development mode)
-- `--host 0.0.0.0`: Listen on all network interfaces
-- `--port 8000`: Specify a custom port
+You need **two separate terminals**: one for backend and one for frontend.
 
-### 5. Access the API Documentation
+> In both terminals, activate the same virtual environment first.
 
-Once the server is running, you can access:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+Before starting backend/frontend, ensure Ollama is running.
 
-## Deactivating the Virtual Environment
+## Required: Start Ollama
 
-When you're done working, deactivate the virtual environment:
+Start Ollama first:
+
+```bash
+ollama serve
+```
+
+Verify models are available:
+
+```bash
+ollama list
+```
+
+---
+
+### Terminal 1: Backend (FastAPI)
+
+```powershell
+cd backend
+..\.venv\Scripts\Activate.ps1
+uvicorn main:app --port 8000 --reload
+```
+
+Backend URLs:
+- API base: `http://127.0.0.1:8000`
+- Swagger docs: `http://127.0.0.1:8000/docs`
+
+---
+
+### Terminal 2: Frontend (Streamlit)
+
+```powershell
+cd frontend
+..\.venv\Scripts\Activate.ps1
+streamlit run app.py
+```
+
+Frontend URL (default):
+- `http://localhost:8501`
+
+## Stop / Exit
+
+- Stop servers: press `Ctrl + C` in each terminal
+- Deactivate venv when done:
 
 ```bash
 deactivate
 ```
 
-## Project Structure
+## Common Issues
 
-```
-AgentXploit/
-├── app/
-│   ├── .env           # Environment variables
-│   ├── main.py        # FastAPI application entry point
-│   ├── routes.py      # API routes
-│   ├── logic.py       # Core logic
-│   └── __pycache__/   # Python cache
-├── requirements.txt   # Project dependencies
-└── README.md         # This file
-```
+- `503 UNAVAILABLE` from Gemini: temporary Gemini service overload; retry after a short delay.
+- `Connection refused` for `127.0.0.1:8000`: backend is not running.
+- Empty models list: Ollama is not running or no local models are installed.
