@@ -173,17 +173,17 @@ else:
 
             with c1:
                 if st.button("Pause"):
-                    client.session_control(session_id, "pause")
+                    client.session_action(session_id, "pause")
                     st.rerun()
 
             with c2:
                 if st.button("Resume"):
-                    client.session_control(session_id, "resume")
+                    client.session_action(session_id, "resume")
                     st.rerun()
 
             with c3:
                 if st.button("Stop"):
-                    client.session_control(session_id, "stop")
+                    client.session_action(session_id, "stop")
                     st.rerun()
 
     st.divider()

@@ -38,9 +38,9 @@ class ApiClient:
         response.raise_for_status()
         return response.json()
 
-    def session_control(self, session_id, action):
+    def session_action(self, session_id, action):
         res = requests.post(
-            f"{self.base_url}/api/{session_id}/control",
+            f"{self.base_url}/api/{session_id}/action",
             json={"action": action}
         )
         res.raise_for_status()
