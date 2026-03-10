@@ -58,6 +58,12 @@ class FinishTestResponse(BaseModel):
     breaking_prompt: str
     elapsed_seconds: float
 
+class EvaluateRequest(BaseModel):
+    target_response: str
+
+class EvaluateResponse(BaseModel):
+    judgement: str
+
 def initialize(target_model: str, success_criteria: str, max_attempts: int) -> InitializeResponse:
     session_id = str(uuid.uuid4())  
 
@@ -226,7 +232,7 @@ def update_session_status(session_id: str, new_status: str) -> None:
     conn.close()
 
 
-def handle_session_action(session_id: str, action: str) -> ActionResponse:
+def handle_session_control(session_id: str, action: str) -> ActionResponse:
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -299,7 +305,7 @@ Do NOT include any explanations or extra text.
     return judgement
 
 
-def get_finish_test_data(session_id: str) -> FinishTestResponse:
+def get_tests_summary(session_id: str) -> FinishTestResponse:
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -328,7 +334,7 @@ def get_finish_test_data(session_id: str) -> FinishTestResponse:
     breaking_prompt = ""
     for m in messages:
         if m["sender"] == "gemini_judge" and m["content"].lower() in ["true", "1", "10", "10/10"]:
-            # ההודעה הקודמת של Gemini היא ה-prompt שגרם ל-success
+            # The previous Gemini message is the prompt that caused success.
             idx = messages.index(m)
             if idx > 0 and messages[idx-1]["sender"] == "gemini":
                 breaking_prompt = messages[idx-1]["content"]
@@ -347,3 +353,21 @@ def get_finish_test_data(session_id: str) -> FinishTestResponse:
         breaking_prompt=breaking_prompt,
         elapsed_seconds=elapsed_seconds
     )
+
+def evaluate_target_response(session_id: str, target_response: str) -> EvaluateResponse:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT success_criteria FROM sessions WHERE session_id = ?",
+        (session_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        raise ValueError("Session not found")
+
+    success_criteria = row["success_criteria"]
+    judgement = judge_target_response(session_id, target_response, success_criteria)
+    
+    return EvaluateResponse(judgement=judgement)
