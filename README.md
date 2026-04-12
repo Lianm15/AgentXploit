@@ -131,4 +131,4 @@ deactivate
 
 - `503 UNAVAILABLE` from Gemini: temporary Gemini service overload; retry after a short delay.
 - `Connection refused` for `127.0.0.1:8000`: backend is not running.
-- Empty models list: Ollama is not running or no local models are installed.
+- Empty models list: Ollama is not running or no lo.\.venv\Scripts\Activate.ps1cal models are installed.

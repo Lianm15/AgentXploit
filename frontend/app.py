@@ -10,6 +10,15 @@ def load_css(file):
 
 st.set_page_config(page_title="AgentXploit", layout="wide")
 
+st.markdown("""
+    <style>
+    [data-testid="stDeployButton"] { display: none !important; }
+    [data-testid="stToolbar"] { display: none !important; }
+    #MainMenu { display: none !important; }
+    header { display: none !important; }
+    </style>
+""", unsafe_allow_html=True)
+
 client = ApiClient()
 
 if "session_id" not in st.session_state:
@@ -110,7 +119,7 @@ else:
     else:
         elapsed = int(time.time() - st.session_state.start_time)
 
-    col1, col2, col3, col4 = st.columns([2,2,2,2])
+    col1, col2, col3, col4, col5 = st.columns([2,2,2,2,3])
 
     with col1:
         st.markdown(
@@ -156,36 +165,22 @@ else:
             """,
             unsafe_allow_html=True
         )
-
-    st.divider()
-
-    # ==========================
-    # CONTROL BUTTONS
-    # ==========================
-
-    if status not in ["finished", "failed", "success_found"]:
-
-        left, right = st.columns([8,2])
-
-        with right:
-
-            c1, c2, c3 = st.columns(3)
-
-            with c1:
+        
+    with col5:
+        if status not in ["finished", "failed", "success_found"]:
+            b1, b2, b3 = st.columns(3)
+            with b1:
                 if st.button("Pause"):
                     client.session_action(session_id, "pause")
                     st.rerun()
-
-            with c2:
+            with b2:
                 if st.button("Resume"):
                     client.session_action(session_id, "resume")
                     st.rerun()
-
-            with c3:
+            with b3:
                 if st.button("Stop"):
                     client.session_action(session_id, "stop")
                     st.rerun()
-
     st.divider()
 
     # ==========================
