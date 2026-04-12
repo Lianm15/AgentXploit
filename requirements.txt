@@ -5,3 +5,7 @@ pydantic-settings
 httpx
 python-dotenv
 google-genai
+
+# Frontend
+streamlit
+streamlit-autorefresh
