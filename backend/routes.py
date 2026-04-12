@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from logic import AttackConfig, AttackResult, InitializeResponse, Transcript, initialize as initialize_session
 from pydantic import BaseModel
 from typing import List
-from logic import get_messages
+from logic import get_messages, get_history
 from logic import get_local_models, ModelsResponse
 from fastapi import BackgroundTasks
 from logic import run_attack_process
@@ -26,6 +26,15 @@ async def initialize(request: InitializeRequest) -> InitializeResponse:
     except Exception as e:
         logger.error(f"Initialization failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error during initialization")
+    
+
+@router.get("/history")
+async def history():
+    try:
+        return get_history()
+    except Exception as e:
+        logger.error(f"Error retrieving history: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error while retrieving history")
 
 
 @router.get("/{session_id}/messages", response_model=Transcript)
@@ -48,10 +57,7 @@ async def get_transcript(session_id: str) -> Transcript:
 
     except Exception as e:
         logger.error(f"Error retrieving messages for session {session_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail="Internal Server Error while retrieving messages"
-        )
+        raise HTTPException(status_code=500, detail="Internal Server Error while retrieving messages")
     
 @router.get("/models", response_model=ModelsResponse)
 async def list_models() -> ModelsResponse:

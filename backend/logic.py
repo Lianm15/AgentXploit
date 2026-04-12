@@ -1,11 +1,11 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from gemini import run_gemini_attack  
-from database import get_connection   
+from gemini import run_gemini_attack  #connects to gemini
+from database import get_connection   #connects to sqlite
+import uuid                           #generates session IDs
+import time                           #measures time elapsed
 from datetime import datetime
-import uuid 
 import requests                         
-import time
 
 class AttackConfig(BaseModel):
     target_llm_id: str
@@ -123,6 +123,26 @@ def get_messages(session_id: str):
     
     messages = cursor.fetchall()
     conn.close()
+    return [Message(sender=msg['sender'], content=msg['content'], timestamp=msg['timestamp']) for msg in messages]
+
+def save_result(session_id: str, target_model: str, time_elapsed: float, success: bool) -> None:
+    """Save the final result of a test session"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    # count how many messages were sent in this session
+    cursor.execute("SELECT COUNT(*) FROM messages WHERE session_id = ?", (session_id,))
+    messages_count = cursor.fetchone()[0]
+
+    cursor.execute("""
+        INSERT INTO results (session_id, target_model, time_elapsed, messages_count, success)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        session_id,
+        target_model,
+        time_elapsed,
+        messages_count,
+        success
+    ))
 
     return [
         {
@@ -231,6 +251,21 @@ def update_session_status(session_id: str, new_status: str) -> None:
     conn.commit()
     conn.close()
 
+def get_history() -> list:
+    """Get all previous test results for history"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    # newest first
+    cursor.execute("""
+        SELECT session_id, target_model, time_elapsed, messages_count, success
+        FROM results
+        ORDER BY rowid DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+    # convert each SQLite row to a Python dict so FastAPI can return it as JSON
+    return [dict(row) for row in rows]
 
 def handle_session_control(session_id: str, action: str) -> ActionResponse:
     conn = get_connection()
@@ -296,10 +331,10 @@ OR
 Do NOT include any explanations or extra text.
 """
 
-   
+
     judgement = run_gemini_attack(JUDGE_PROMPT)
 
-   
+
     judgement = judgement.strip()
 
     return judgement

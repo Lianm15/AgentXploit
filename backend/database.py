@@ -19,7 +19,19 @@ def create_tables() -> None:
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (session_id) REFERENCES sessions(session_id)
         )
+    """)    
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS results (
+            session_id VARCHAR(50) PRIMARY KEY,
+            target_model VARCHAR(50) NOT NULL,
+            time_elapsed FLOAT NOT NULL,
+            messages_count INTEGER NOT NULL,
+            success BOOLEAN NOT NULL,
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+        )
     """)
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS sessions (
         session_id VARCHAR(50) PRIMARY KEY,
