@@ -157,7 +157,8 @@ def save_result(session_id: str, target_model: str, time_elapsed: float, success
 
 def wait_if_paused(session_id):
     while True:
-        status = get_session_status(session_id)
+        status_response = get_session_status(session_id)
+        status = status_response.status 
 
         if status == "paused":
             time.sleep(1)
@@ -179,46 +180,52 @@ def get_local_models() -> List[str]:
     except Exception:
         return []
     
+def call_local_model(model_name: str, prompt: str) -> str:
+    response = requests.post(
+        "http://localhost:11434/api/generate",
+        json={
+            "model": model_name,
+            "prompt": prompt,
+            "stream": False
+        }
+    )
+    response.raise_for_status()
+    return response.json()["response"]
+    
 def run_attack_process(session_id: str, success_criteria: str):
-
     try:
-        print("STEP 1 - starting")
         update_session_status(session_id, "running")
-
         wait_if_paused(session_id)
 
-        print("STEP 2 - calling gemini")
+        # Get model name from DB
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT target_model FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        conn.close()
+        target_model = row["target_model"]
+
         jailbreak_prompt = run_gemini_attack(success_criteria)
-
         save_message(session_id, "attacker", jailbreak_prompt)
-
         wait_if_paused(session_id)
 
-        print("STEP 3 - got jailbreak")
-
-        target_response = "This is what the local model responded"
-
+        # ← Real call now
+        target_response = call_local_model(target_model, jailbreak_prompt)
         save_message(session_id, "target", target_response)
-
         wait_if_paused(session_id)
-
-        print("STEP 4 - judging")
 
         judgement = judge_target_response(session_id, target_response, success_criteria)
-
         save_message(session_id, "judge", str(judgement))
 
         if "true" in str(judgement).lower():
             update_session_status(session_id, "success_found")
+            return
         else:
             update_session_status(session_id, "finished")
-
-        print("STEP 5 - finished")
 
     except Exception as e:
         update_session_status(session_id, "failed")
         print("Error:", e)
-
 
 def get_session_status(session_id: str) -> SessionStatusResponse:
     conn = get_connection()
