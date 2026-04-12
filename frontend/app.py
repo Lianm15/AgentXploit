@@ -171,15 +171,15 @@ else:
             b1, b2, b3 = st.columns(3)
             with b1:
                 if st.button("Pause"):
-                    client.session_action(session_id, "pause")
+                    client.session_control(session_id, "pause")
                     st.rerun()
             with b2:
                 if st.button("Resume"):
-                    client.session_action(session_id, "resume")
+                    client.session_control(session_id, "resume")
                     st.rerun()
             with b3:
                 if st.button("Stop"):
-                    client.session_action(session_id, "stop")
+                    client.session_control(session_id, "stop")
                     st.rerun()
     st.divider()
 
