@@ -144,7 +144,6 @@ def save_result(session_id: str, target_model: str, time_elapsed: float, success
 def wait_if_paused(session_id):
     while True:
         status = get_session_status(session_id).status
-
         if status == "paused":
             time.sleep(1)
             continue
@@ -320,7 +319,6 @@ def run_attack_process(session_id: str):
     except Exception as e:
         update_session_status(session_id, "failed")
         print(f"[SESSION {session_id}] FAILED: {e}")
-
 
 def get_session_status(session_id: str) -> SessionStatusResponse:
     conn = get_connection()
