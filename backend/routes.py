@@ -75,7 +75,7 @@ async def start_attack(session_id: str, background_tasks: BackgroundTasks):
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT success_criteria FROM sessions WHERE session_id = ?",
+            "SELECT 1 FROM sessions WHERE session_id = ?",
             (session_id,)
         )
         row = cursor.fetchone()
@@ -84,9 +84,7 @@ async def start_attack(session_id: str, background_tasks: BackgroundTasks):
         if not row:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        success_criteria = row["success_criteria"]
-
-        background_tasks.add_task(run_attack_process, session_id, success_criteria)
+        background_tasks.add_task(run_attack_process, session_id)
 
         return {"status": "Attack started in background"}
 
