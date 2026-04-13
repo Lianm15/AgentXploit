@@ -41,11 +41,7 @@ class ApiClient:
     def session_control(self, session_id, control):
         res = requests.post(
             f"{self.base_url}/api/{session_id}/control",
-<<<<<<< HEAD
-            json={"action": action}
-=======
             json={"action": control}
->>>>>>> 93cbf75539ad8b3cce1842fa934437101361db1a
         )
         res.raise_for_status()
         return res.json()
