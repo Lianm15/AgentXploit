@@ -1,6 +1,8 @@
 import streamlit as st
 from api_client import ApiClient
 import time
+import html
+import re
 
 
 def load_css(file):
@@ -20,6 +22,22 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 client = ApiClient()
+
+
+def normalize_message_content(content: str) -> str:
+    """Prepare model output so HTML payloads render instead of showing as raw code blocks."""
+    if not content:
+        return ""
+
+    # Unescape HTML entities
+    normalized = html.unescape(content).strip()
+
+    # Remove code fence wrappers (```html ... ```)
+    fence_match = re.search(r"```(?:html)?\s*(.*?)\s*```", normalized, flags=re.IGNORECASE | re.DOTALL)
+    if fence_match:
+        return fence_match.group(1).strip()
+
+    return normalized
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = None
@@ -208,7 +226,7 @@ else:
         for msg in transcript:
 
             sender = msg["sender"]
-            content = msg["content"]
+            raw_content = msg["content"]
             timestamp = msg.get("timestamp", "")
 
             if sender == "attacker":
@@ -226,26 +244,23 @@ else:
                 name = "Judge"
                 avatar_text = "J"
 
-            st.markdown(f"""
-        <div class="msg-card">
-
-        <div class="msg-header">
-        <div class="{avatar_class}">
-        {avatar_text}
-        </div>
-
-        <div class="msg-meta">
-        <span class="msg-name">{name}</span>
-        <span class="msg-time">{timestamp}</span>
-        </div>
-        </div>
-
-        <div class="msg-body">
-        {content}
-        </div>
-
-        </div>
-        """, unsafe_allow_html=True)
+            # Normalize and prepare content
+            content = normalize_message_content(raw_content)
+            
+            # Render header and metadata
+            header_html = f"""<div class="msg-card">
+<div class="msg-header">
+<div class="{avatar_class}">{avatar_text}</div>
+<div class="msg-meta">
+<span class="msg-name">{name}</span>
+<span class="msg-time">{timestamp}</span>
+</div>
+</div>
+<div class="msg-body">"""
+            
+            st.markdown(header_html, unsafe_allow_html=True)
+            st.markdown(content, unsafe_allow_html=True)
+            st.markdown("</div></div>", unsafe_allow_html=True)
 
 
     st.markdown('</div>', unsafe_allow_html=True)
