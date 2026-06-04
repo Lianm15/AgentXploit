@@ -5,7 +5,10 @@ from database import get_connection   #connects to sqlite
 import uuid                           #generates session IDs
 import time                           #measures time elapsed
 from datetime import datetime
-import requests                         
+import os
+import requests
+
+_OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
 class AttackConfig(BaseModel):
     target_llm_id: str
@@ -158,7 +161,7 @@ def get_local_models() -> List[str]:
     Fetch locally available LLM models from Ollama
     """
     try:
-        response = requests.get("http://localhost:11434/api/tags")
+        response = requests.get(f"{_OLLAMA_URL}/api/tags")
         data = response.json()
         return [model["name"] for model in data.get("models", [])]
     except Exception:
@@ -189,7 +192,7 @@ def _get_session_config(session_id: str):
 def _run_local_model(target_model: str, prompt: str) -> str:
     """Send a single prompt to the local Ollama model and return its text response."""
     response = requests.post(
-        "http://localhost:11434/api/generate",
+        f"{_OLLAMA_URL}/api/generate",
         json={
             "model": target_model,
             "prompt": prompt,

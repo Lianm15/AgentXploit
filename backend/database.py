@@ -1,7 +1,10 @@
 import sqlite3
+import os
+
+_DB_PATH = os.getenv("DB_PATH", "agentxploit.db")
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect("agentxploit.db")
+    conn = sqlite3.connect(_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 

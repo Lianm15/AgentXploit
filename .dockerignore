@@ -1,0 +1,22 @@
+# Python runtime artifacts
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Secrets — injected at runtime via docker-compose environment, never baked in
+.env
+backend/.env
+
+# Local SQLite database — the db_data volume is used instead inside containers
+*.db
+
+# Git internals
+.git/
+.gitignore
+
+# IDE config
+.vscode/
+.idea/

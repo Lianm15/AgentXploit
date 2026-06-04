@@ -1,8 +1,9 @@
+import os
 import requests
 
 class ApiClient:
-    def __init__(self, base_url="http://127.0.0.1:8000"):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, base_url=None):
+        self.base_url = (base_url or os.getenv("BACKEND_URL", "http://127.0.0.1:8000")).rstrip("/")
 
     def get_models(self):
         res = requests.get(f"{self.base_url}/api/models")
