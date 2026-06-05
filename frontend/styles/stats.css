@@ -1,0 +1,117 @@
+/* ── Background ── */
+body,
+[data-testid="stAppViewContainer"] {
+    background-color: #0a0a1a !important;
+}
+
+.stApp {
+    background: linear-gradient(135deg, #0a0a1a, #0f1629, #1a1a3e);
+    min-height: 100vh;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0a0a1a, #0f1629) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+
+.block-container {
+    max-width: 1100px !important;
+    margin: 0 auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 3rem !important;
+}
+
+/* ── Typography ── */
+.page-title {
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #ffffff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 0.3rem 0;
+}
+
+.page-subtitle {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-bottom: 1.5rem;
+}
+
+/* ── General text ── */
+p, label, .stMarkdown p {
+    color: #e2e8f0 !important;
+}
+
+/* ── Tabs ── */
+[data-testid="stTabs"] [data-testid="stTab"] {
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #94a3b8 !important;
+    border-radius: 6px 6px 0 0;
+    padding: 0.5rem 1.25rem;
+}
+
+[data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"] {
+    color: #a5b4fc !important;
+    border-bottom: 2px solid #6366f1;
+}
+
+/* ── Metric cards ── */
+[data-testid="stMetric"] {
+    background: rgba(99, 102, 241, 0.07);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+}
+
+[data-testid="stMetricLabel"] p {
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    color: #94a3b8 !important;
+    letter-spacing: 0.07em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 1.45rem !important;
+    font-weight: 700 !important;
+    color: #f1f5f9 !important;
+}
+
+/* Tighter vertical gap between metric rows */
+[data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] + div {
+    margin-top: 0 !important;
+}
+
+/* ── Section labels ── */
+.section-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+/* ── Dataframes ── */
+[data-testid="stDataFrame"] {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ── Charts ── */
+[data-testid="stVegaLiteChart"] {
+    border-radius: 10px;
+    overflow: hidden;
+}
