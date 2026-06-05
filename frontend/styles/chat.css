@@ -1,7 +1,26 @@
 /* ── Background ── */
+body,
+[data-testid="stAppViewContainer"] {
+    background-color: #0a0a1a !important;
+}
+
 .stApp {
-    background: linear-gradient(135deg, #0f0c29, #1a1a3e, #24243e);
+    background: linear-gradient(135deg, #0a0a1a, #0f1629, #1a1a3e);
     min-height: 100vh;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0a0a1a, #0f1629) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+
+/* ── General text readability ── */
+p, label, .stMarkdown p, .stMarkdown span, .stText {
+    color: #e2e8f0 !important;
 }
 
 .block-container {
@@ -15,7 +34,7 @@
 div[data-testid="stHorizontalBlock"]:first-of-type {
     background: rgba(255, 255, 255, 0.04);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
     padding: 0.5rem 1.5rem;
     margin-bottom: 0 !important;
     backdrop-filter: blur(12px);
@@ -25,14 +44,13 @@ div[data-testid="stHorizontalBlock"]:first-of-type {
 .brand-name {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #f9fafb;
+    color: #f1f5f9;
 }
 
 .status-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    /* Colors are injected dynamically via CSS variables */
     background: var(--pill-bg);
     border: 1px solid var(--pill-border);
     color: var(--pill-color);
@@ -42,12 +60,12 @@ div[data-testid="stHorizontalBlock"]:first-of-type {
     border-radius: 999px;
 }
 
-/* ── Stats ── */
+/* ── Stat labels in header ── */
 .stat-label {
     display: block;
     font-size: 0.65rem;
     font-weight: 600;
-    color: #6b7280;
+    color: #94a3b8;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 0.1rem;
@@ -57,15 +75,7 @@ div[data-testid="stHorizontalBlock"]:first-of-type {
     display: block;
     font-size: 1rem;
     font-weight: 700;
-    color: #f9fafb;
-}
-
-.stat-divider {
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    height: 2.5rem;
-    margin: 0 1.5rem;
-    display: inline-block;
-    vertical-align: middle;
+    color: #f1f5f9;
 }
 
 /* ── Nav control buttons ── */
@@ -74,18 +84,18 @@ div[data-testid="stButton"] > button {
     font-size: 0.83rem !important;
     font-weight: 500 !important;
     padding: 0.3rem 0.9rem !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    background: rgba(255, 255, 255, 0.07) !important;
-    color: #d1d5db !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #e2e8f0 !important;
     transition: all 0.15s !important;
     width: 100% !important;
     white-space: nowrap !important;
 }
 
 div[data-testid="stButton"] > button:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.12) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: #f9fafb !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.32) !important;
+    color: #f8fafc !important;
 }
 
 div[data-testid="stButton"] > button:disabled {
@@ -93,9 +103,9 @@ div[data-testid="stButton"] > button:disabled {
     cursor: not-allowed !important;
 }
 
-/* ── Finish Test button (primary type → red) ── */
+/* ── Finish Test button ── */
 div[data-testid="stButton"] > button[kind="primary"] {
-    background: #ef4444 !important;
+    background: linear-gradient(135deg, #dc2626, #ef4444) !important;
     color: #fff !important;
     border: none !important;
     font-size: 1rem !important;
@@ -106,42 +116,65 @@ div[data-testid="stButton"] > button[kind="primary"] {
 }
 
 div[data-testid="stButton"] > button[kind="primary"]:hover {
-    background: #dc2626 !important;
+    background: linear-gradient(135deg, #b91c1c, #dc2626) !important;
     box-shadow: 0 6px 20px rgba(239, 68, 68, 0.55) !important;
     transform: translateY(-1px) !important;
 }
 
-/* ── Message feed ── */
+/* ── Chat area ── */
 .chat-area {
-    padding: 1.5rem 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 2rem;
 }
 
+/* ── Message cards (base) ── */
 .msg-card {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.09);
     border-radius: 12px;
-    padding: 1.25rem 1.5rem;
+    padding: 1.1rem 1.4rem;
     margin-bottom: 1rem;
     backdrop-filter: blur(8px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+    border-left-width: 3px;
+    border-left-style: solid;
 }
 
+/* ── Per-sender accent colors ── */
+.msg-card-attacker {
+    border-left-color: #6366f1;
+    background: rgba(99, 102, 241, 0.06);
+}
+
+.msg-card-target {
+    border-left-color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.06);
+}
+
+.msg-card-judge {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+/* ── Message header ── */
 .msg-header {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 0.7rem;
+    margin-bottom: 0.65rem;
 }
 
+/* ── Avatars ── */
 .avatar {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 8px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     color: #fff;
 }
@@ -150,10 +183,15 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
     background: linear-gradient(135deg, #4f46e5, #6366f1);
 }
 
-.avatar-ai {
-    background: linear-gradient(135deg, #7c3aed, #9333ea);
+.avatar-target {
+    background: linear-gradient(135deg, #7c3aed, #8b5cf6);
 }
 
+.avatar-judge {
+    background: linear-gradient(135deg, #059669, #10b981);
+}
+
+/* ── Message metadata ── */
 .msg-meta {
     display: flex;
     flex-direction: column;
@@ -162,141 +200,33 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
 .msg-name {
     font-size: 0.88rem;
     font-weight: 600;
-    color: #f3f4f6;
+    color: #f1f5f9;
 }
 
 .msg-time {
-    font-size: 0.75rem;
-    color: #6b7280;
+    font-size: 0.73rem;
+    color: #64748b;
 }
 
+/* ── Message body ── */
 .msg-body {
-    font-size: 0.88rem;
-    color: #d1d5db;
-    line-height: 1.6;
+    font-size: 0.9rem;
+    color: #e2e8f0;
+    line-height: 1.65;
 }
 
-.attack-badge {
-    display: inline-block;
-    margin-top: 0.6rem;
-    background: rgba(253, 224, 71, 0.1);
-    border: 1px solid rgba(253, 224, 71, 0.35);
-    color: #fde047;
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.2rem 0.65rem;
-    border-radius: 6px;
-}
-
+/* ── Empty state ── */
 .empty-chat {
     text-align: center;
-    color: #4b5563;
+    color: #64748b;
     padding: 4rem 0;
     font-size: 0.9rem;
 }
 
-/* message container */
-
-.message{
-    display:flex;
-    align-items:flex-start;
-    gap:14px;
-
-    padding:18px;
-    margin-bottom:16px;
-
-    background: rgba(255,255,255,0.05);
-    border:1px solid rgba(255,255,255,0.08);
-    border-radius:12px;
-
-    width:100%;
-}
-
-.chat-area{
-    max-width:900px;
-    margin-left:auto;
-    margin-right:auto;
-    padding-top:30px;
-    padding-bottom:40px;
-}
-
-/* avatar */
-
-.message-avatar {
-    width: 36px;
-    height: 36px;
-
-    border-radius: 8px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 0.75rem;
+/* ── Chat page header title ── */
+.chat-header-title {
+    font-size: 1.4rem;
     font-weight: 700;
-    color: white;
-}
-
-.avatar-attacker {
-    background: linear-gradient(135deg,#4f46e5,#6366f1);
-}
-
-.avatar-target {
-    background: linear-gradient(135deg,#7c3aed,#9333ea);
-}
-
-.avatar-judge {
-    background: linear-gradient(135deg,#ef4444,#dc2626);
-}
-
-/* message body */
-
-.message-body {
-    flex: 1;
-}
-
-.message-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #f3f4f6;
-}
-
-.message-time {
-    font-size: 0.72rem;
-    color: #6b7280;
-}
-
-.message-text {
-    margin-top: 6px;
-    font-size: 0.9rem;
-    color: #d1d5db;
-    line-height: 1.5;
-}
-
-/* control buttons */
-
-button[kind="secondary"] {
-    border-radius: 8px !important;
-    background: rgba(255,255,255,0.07) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: #d1d5db !important;
-}
-
-button[kind="secondary"]:hover {
-    background: rgba(255,255,255,0.12) !important;
-}
-
-/* finish button */
-
-button[kind="primary"] {
-    background: #ef4444 !important;
-    border: none !important;
-    border-radius: 10px !important;
-}
-
-.chat-header-title{
-    font-size:1.4rem;
-    font-weight:700;
-    color:#f9fafb;
-    margin-bottom:10px;
+    color: #f1f5f9;
+    margin-bottom: 10px;
 }
