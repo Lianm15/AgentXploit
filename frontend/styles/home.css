@@ -1,179 +1,227 @@
-/* ── Background ── */
+/* =========================================================
+   AgentXploit - Home / Configuration page
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-0:        #07080c;
+    --bg-1:        #0b0d14;
+    --panel:       rgba(255, 255, 255, 0.035);
+    --panel-brd:   rgba(255, 255, 255, 0.09);
+    --field:       rgba(255, 255, 255, 0.04);
+    --field-brd:   rgba(255, 255, 255, 0.12);
+    --txt-hi:      #f4f5f7;
+    --txt:         #c5c9d3;
+    --txt-mut:     #6b7180;
+    --accent:      #ffb020;   /* amber */
+    --accent-2:    #ff6b4a;   /* coral */
+    --accent-soft: rgba(255, 176, 32, 0.14);
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-body:    'Hanken Grotesk', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+}
+
+/* ── Background: layered grid + radial glow ── */
 .stApp {
-    background: linear-gradient(135deg, #0f0c29, #1a1a3e, #24243e);
+    background:
+        radial-gradient(900px 480px at 50% -8%, rgba(255, 176, 32, 0.10), transparent 60%),
+        radial-gradient(700px 500px at 85% 110%, rgba(255, 107, 74, 0.07), transparent 60%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-0) 70%);
     min-height: 100vh;
 }
 
+/* faint engineering grid overlay */
+.stApp::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);
+            mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);
+    pointer-events: none;
+    z-index: 0;
+}
+
 .block-container {
-    max-width: 680px !important;
+    max-width: 600px !important;
     margin: 0 auto !important;
-    padding-top: 3rem !important;
-    padding-bottom: 3rem !important;
+    padding-top: 0.01rem !important;
+    padding-bottom: 0.01rem !important;
+    position: relative;
+    z-index: 1;
 }
 
-/* ── Header ── */
-.header-badge {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 1rem;
-}
-
-.badge {
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.4);
-    color: #a5b4fc;
-    font-size: 0.75rem;
+/* ── Header block ── */
+.ax-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.32em;
     text-transform: uppercase;
-    padding: 0.3rem 0.9rem;
-    border-radius: 999px;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 0.9rem;
+   
 }
+.ax-eyebrow::before { content: "› "; opacity: 0.6; }
 
 .page-title {
+    font-family: var(--font-display) !important;
     text-align: center;
-    font-size: 2.6rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    background: linear-gradient(90deg, #ffffff 0%, #a5b4fc 100%);
+    font-size: 3.4rem !important;
+    font-weight: 800 !important;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    color: var(--txt-hi);
+    margin: 0 0 0.5rem 0 !important;
+}
+.page-title span {
+    background: linear-gradient(100deg, var(--accent), var(--accent-2));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin: 0 0 0.4rem 0;
 }
 
 .page-subtitle {
     text-align: center;
-    font-size: 0.95rem;
-    color: #6b7280;
-    margin-bottom: 2.4rem;
+    font-family: var(--font-body);
+    font-size: 0.96rem;
+    color: var(--txt-mut);
+    margin-bottom: 2.2rem;
+
 }
 
-/* ── Form field labels ── */
-.field-label {
-    font-size: 0.9rem;
+/* ── Form card (st.container(border=True)) ── */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--panel) !important;
+    border: 1px solid var(--panel-brd) !important;
+    border-radius: 16px !important;
+    padding: 1.9rem 1.9rem 2rem !important;
+    backdrop-filter: blur(14px);
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.form-card-head {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
     font-weight: 600;
-    color: #e5e7eb;
-    margin-bottom: 0.15rem;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--txt-mut);
+    padding-bottom: 1.1rem;
+    margin-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.field-desc {
-    font-size: 0.8rem;
-    color: #6b7280;
-    margin-bottom: 0.55rem;
+/* ── Widget labels → mono tech labels ── */
+[data-testid="stWidgetLabel"] p,
+.stSelectbox label p,
+.stTextArea label p,
+.stNumberInput label p {
+    font-family: var(--font-mono) !important;
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--txt) !important;
 }
 
-.card-divider {
-    border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
-    margin: 1.6rem 0;
-}
-
-/* ── Inputs ── */
+/* ── Inputs (shared) ── */
 div[data-baseweb="select"] > div,
-div[data-baseweb="textarea"] > div,
-div[data-baseweb="input"] > div {
-    background: rgba(255, 255, 255, 0.05) !important;
+div[data-baseweb="textarea"],
+div[data-baseweb="base-input"],
+.stNumberInput div[data-baseweb="input"] {
+    background: var(--field) !important;
     border-radius: 10px !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid var(--field-brd) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
 div[data-baseweb="select"] > div:focus-within,
-div[data-baseweb="textarea"] > div:focus-within,
-div[data-baseweb="input"] > div:focus-within {
-    border-color: rgba(99, 102, 241, 0.6) !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+div[data-baseweb="textarea"]:focus-within,
+.stNumberInput div[data-baseweb="input"]:focus-within {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-soft) !important;
 }
 
-div[data-baseweb="select"] span,
-div[data-baseweb="select"] input {
-    color: #f9fafb !important;
+/* Text inside every input is light & readable (fixes the black-on-dark bug) */
+input,
+textarea,
+div[data-baseweb="select"] *,
+.stTextArea textarea,
+.stNumberInput input {
+    color: var(--txt-hi) !important;
+    font-family: var(--font-body) !important;
+    -webkit-text-fill-color: var(--txt-hi) !important;
 }
+textarea { line-height: 1.55 !important; }
+::placeholder { color: var(--txt-mut) !important; opacity: 1; }
 
-/* ── Submit button ── */
-div[data-testid="stFormSubmitButton"] > button {
-    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
-    color: #ffffff !important;
-    border: none !important;
+/* Dropdown popover menu → dark, matches the theme */
+div[data-baseweb="popover"] ul[role="listbox"],
+div[data-baseweb="popover"] [role="listbox"] {
+    background: #12141c !important;
+    border: 1px solid var(--field-brd) !important;
     border-radius: 10px !important;
-    font-size: 0.95rem !important;
-    font-weight: 600 !important;
-    width: 100% !important;
-    padding: 0.7rem 3rem !important;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
-    transition: all 0.2s ease !important;
+}
+li[role="option"] { color: var(--txt) !important; }
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {
+    background: var(--accent-soft) !important;
+    color: var(--txt-hi) !important;
 }
 
-div[data-testid="stFormSubmitButton"] > button:hover {
-    background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.55) !important;
-    transform: translateY(-1px) !important;
+/* Number-input +/- steppers */
+.stNumberInput button {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-left: 1px solid var(--field-brd) !important;
+    color: var(--txt) !important;
 }
+.stNumberInput button:hover { color: var(--accent) !important; }
+
+div[data-testid="stButton"] {
+    display: flex !important;
+    justify-content: center !important;
+}
+
+/* ── Primary CTA (st.button) ── */
+div[data-testid="stButton"] > button {
+    width: 100% !important;
+    margin-top: 0.4rem !important;
+    background: linear-gradient(100deg, var(--accent), var(--accent-2)) !important;
+    color: #1a0d00 !important;
+    border: none !important;
+    border-radius: 11px !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    padding: 0.78rem 0 !important;
+    box-shadow: 0 8px 24px rgba(255, 134, 40, 0.32) !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
+}
+div[data-testid="stButton"] > button:hover {
+    transform: translateY(-2px) !important;
+    filter: brightness(1.05) !important;
+    box-shadow: 0 12px 32px rgba(255, 134, 40, 0.45) !important;
+}
+div[data-testid="stButton"] > button:active { transform: translateY(0) !important; }
 
 /* ── Disclaimer ── */
 .disclaimer {
     text-align: center;
-    font-size: 0.78rem;
-    color: #374151;
-    margin-top: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--txt-mut);
+    margin-top: 1.1rem;
 }
 
-/* text color inside inputs */
-
-input {
-color: #f9fafb !important;
-}
-
-textarea {
-color: #f9fafb !important;
-}
-
-div[data-baseweb="select"] input {
-color: #f9fafb !important;
-}
-
-div[data-baseweb="select"] span {
-color: #f9fafb !important;
-}
-
-::placeholder {
-color: #9ca3af !important;
-opacity: 1;
-}
-
-div[data-baseweb="select"] {
-color: #f9fafb !important;
-}
-
-div[data-baseweb="select"] span{
-color:white !important;
-}
-
-div[data-baseweb="select"] input{
-color:white !important;
-}
-
-div[data-baseweb="select"] *{
-color:white !important;
-}
-
-textarea{
-color:black !important;
-}
-
-input[type="number"]{
-color:black !important;
-}
-
-div[data-baseweb="input"] input{
-color:black !important;
-}
-
-textarea::placeholder{
-color:#888 !important;
-}
-
-.block-container{
-max-width:680px;
-margin:auto;
-}
+/* Tidy default Streamlit warning/error spacing */
+div[data-testid="stAlert"] { border-radius: 10px !important; margin-top: 0.6rem; }
