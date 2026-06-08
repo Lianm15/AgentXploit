@@ -1,3 +1,38 @@
+
+/* =========================================================
+   AgentXploit - Test page  (tuned to the CURRENT app.py)
+   Offensive-security console: amber accent, mono labels
+   Transcript/log style (works with split-block messages)
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-0:#07080c; --bg-1:#0b0d14;
+    --panel:rgba(255,255,255,0.035); --panel-brd:rgba(255,255,255,0.09);
+    --field:rgba(255,255,255,0.04);  --field-brd:rgba(255,255,255,0.12);
+    --txt-hi:#f4f5f7; --txt:#c5c9d3; --txt-mut:#6b7180;
+    --accent:#ffb020; --accent-2:#ff6b4a; --accent-soft:rgba(255,176,32,0.14);
+    --font-display:'Bricolage Grotesque',sans-serif;
+    --font-body:'Hanken Grotesk',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+}
+
+/* ── Background ── */
+.stApp {
+    background:
+        radial-gradient(1000px 480px at 50% -10%, rgba(255,176,32,0.08), transparent 60%),
+        radial-gradient(800px 500px at 90% 110%, rgba(255,107,74,0.05), transparent 60%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-0) 70%);
+    min-height:100vh;
+}
+
+/* Center the whole page in a contained column -> fixes left cut-off */
+.block-container {
+    max-width:800px !important;
+    margin:0 auto !important;
+    padding:1.2rem 1.5rem 2.5rem !important;
+}
 /* ── Background ── */
 body,
 [data-testid="stAppViewContainer"] {
@@ -179,10 +214,127 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
     color: #fff;
 }
 
-.avatar-ax {
-    background: linear-gradient(135deg, #4f46e5, #6366f1);
+/* Tighten Streamlit's default vertical gaps */
+[data-testid="stVerticalBlock"]{ gap:0.5rem !important; }
+
+/* Kill the duplicate page title (keep the one in the bar) */
+.chat-header-title{ display:none !important; }
+
+/* Dividers -> thin + tight (removes the big gaps) */
+hr{ margin:0.6rem 0 !important; border:none !important; border-top:1px solid rgba(255,255,255,0.07) !important; }
+
+/* ── Header bar ── */
+div[data-testid="stHorizontalBlock"]:first-of-type{
+    background:var(--panel);
+    border:1px solid var(--panel-brd);
+    border-radius:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.3);
+    padding:0.7rem 1.2rem;
+    backdrop-filter:blur(12px);
+    align-items:center;
+    gap:20px;
+    width: 800px;
 }
 
+
+.brand-name{
+    display:inline-flex; align-items:center; gap:0.5rem;
+    font-family:var(--font-display);
+    font-size:1.25rem; font-weight:800; letter-spacing:-0.02em;
+    background:linear-gradient(100deg, var(--txt-hi) 35%, var(--accent) 70%, var(--accent-2));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.brand-name::before{
+    content:""; width:9px; height:9px; border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    box-shadow:0 0 10px rgba(255,176,32,0.7);
+    -webkit-text-fill-color:initial;
+}
+
+.status-pill{
+    display:inline-flex; align-items:center; gap:0.4rem;
+    background:var(--pill-bg); border:1px solid var(--pill-border); color:var(--pill-color);
+    font-family:var(--font-mono); font-size:0.72rem; font-weight:600; letter-spacing:0.06em;
+    padding:0.26rem 0.78rem; border-radius:999px;
+}
+
+.stat-label{
+    display:block; font-family:var(--font-mono); font-size:0.6rem; font-weight:600;
+    color:var(--txt-mut); letter-spacing:0.16em; text-transform:uppercase; margin-bottom:0.15rem;
+}
+.stat-value{
+    display:block; font-family:var(--font-mono); font-size:0.98rem; font-weight:700; color:var(--txt-hi);
+}
+
+/* Give the nested control-button columns breathing room */
+div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"]{
+    gap:24px !important;
+}
+
+/* ── Control buttons ── */
+div[data-testid="stButton"] > button{
+    border-radius:8px !important;
+    font-family:var(--font-mono) !important; font-size:0.72rem !important; font-weight:600 !important;
+    letter-spacing:0.02em !important;
+    padding:0.42rem 0.4rem !important;
+    border:1px solid var(--field-brd) !important; background:var(--field) !important; color:var(--txt) !important;
+    transition:all 0.15s !important; width:100% !important; min-width:0 !important; white-space:nowrap !important;
+}
+div[data-testid="stButton"] > button:hover:not(:disabled){
+    background:var(--accent-soft) !important; border-color:var(--accent) !important; color:var(--txt-hi) !important;
+}
+
+/* ── Finish Test (primary -> amber CTA) ── */
+div[data-testid="stButton"] > button[kind="primary"]{
+    background:linear-gradient(100deg,var(--accent),var(--accent-2)) !important;
+    color:#1a0d00 !important; border:none !important;
+    font-size:0.95rem !important; font-weight:700 !important; letter-spacing:0.04em !important;
+    padding:0.7rem 0 !important; border-radius:11px !important;
+    box-shadow:0 8px 24px rgba(255,134,40,0.32) !important;
+}
+div[data-testid="stButton"] > button[kind="primary"]:hover{
+    transform:translateY(-2px) !important; filter:brightness(1.05) !important;
+    box-shadow:0 12px 32px rgba(255,134,40,0.45) !important;
+}
+
+/* ── Transcript: log style (no boxes, tolerates split blocks) ── */
+.chat-area{ padding:0 !important; }
+
+.msg-card{
+    background:transparent; border:none; box-shadow:none;
+    padding:0; margin:1.3rem 0 0.4rem 0;
+}
+.msg-header{ display:flex; align-items:center; gap:0.7rem; }
+
+.avatar{
+    width:34px; height:34px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-size:0.7rem; font-weight:700;
+}
+.avatar-ax{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#1a0d00; }
+.avatar-ai{ background:rgba(255,255,255,0.1); color:var(--txt-hi); border:1px solid var(--field-brd); }
+
+.msg-meta{ display:flex; flex-direction:column; }
+.msg-name{ font-family:var(--font-mono); font-size:0.82rem; font-weight:600; color:var(--txt-hi); }
+.msg-time{ font-family:var(--font-mono); font-size:0.68rem; color:var(--txt-mut); }
+
+/* The content block that follows the header */
+.msg-body, .chat-area + div, .msg-card + div{ }
+[data-testid="stMarkdownContainer"] p{
+    font-family:var(--font-body);
+    color:var(--txt);
+    line-height:1.65;
+    word-wrap:break-word; overflow-wrap:anywhere;
+}
+
+/* Message text sits indented under the avatar for readability */
+.msg-card ~ [data-testid="stMarkdown"]{ padding-left:2.5rem; }
+
+.empty-chat{
+    text-align:center; color:var(--txt-mut);
+    font-family:var(--font-mono); letter-spacing:0.04em; padding:3.5rem 0; font-size:0.82rem;
+}
+=======
 .avatar-target {
     background: linear-gradient(135deg, #7c3aed, #8b5cf6);
 }
@@ -230,3 +382,4 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
     color: #f1f5f9;
     margin-bottom: 10px;
 }
+

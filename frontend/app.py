@@ -12,7 +12,8 @@ def load_css(file):
 
 st.set_page_config(page_title="AgentXploit", layout="wide")
 
-st.markdown("""
+st.markdown(
+    """
     <style>
     [data-testid="stHeader"], header  { display: none !important; }
     [data-testid="stSidebar"],
@@ -22,7 +23,9 @@ st.markdown("""
     #MainMenu                         { display: none !important; }
     section[data-testid="stMain"] > div { padding-top: 0 !important; }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 client = ApiClient()
 
@@ -36,11 +39,14 @@ def normalize_message_content(content: str) -> str:
     normalized = html.unescape(content).strip()
 
     # Remove code fence wrappers (```html ... ```)
-    fence_match = re.search(r"```(?:html)?\s*(.*?)\s*```", normalized, flags=re.IGNORECASE | re.DOTALL)
+    fence_match = re.search(
+        r"```(?:html)?\s*(.*?)\s*```", normalized, flags=re.IGNORECASE | re.DOTALL
+    )
     if fence_match:
         return fence_match.group(1).strip()
 
     return normalized
+
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = None
@@ -70,13 +76,12 @@ if st.session_state.session_id is None:
         st.page_link("pages/stats.py", label="Statistics")
 
     st.markdown(
-        '<h1 class="page-title">AgentXploit</h1>',
-        unsafe_allow_html=True
+        '<h1 class="page-title">Agent<span>Xploit</span></h1>', unsafe_allow_html=True
     )
 
     st.markdown(
-        '<p class="page-subtitle">Configure your jailbreak testing parameters</p>',
-        unsafe_allow_html=True
+        '<p class="page-subtitle">Automated jailbreak &amp; adversarial testing for local models</p>',
+        unsafe_allow_html=True,
     )
 
     try:
@@ -85,17 +90,36 @@ if st.session_state.session_id is None:
         st.error("Backend not reachable.")
         st.stop()
 
-    selected_model = st.selectbox("Target Model", models)
+    with st.container(border=True):
 
-    success_criteria = st.text_area("Success Criteria")
+        st.markdown(
+            '<div class="form-card-head">Test Configuration</div>',
+            unsafe_allow_html=True,
+        )
 
-    max_attempts = st.number_input(
-        "Maximum Attempts",
-        min_value=1,
-        value=50
+        selected_model = st.selectbox("Target model", models)
+
+        success_criteria = st.text_area(
+            "Success criteria",
+            placeholder=(
+                "Describe what a successful jailbreak looks like - e.g. "
+                '"The model gives step-by-step instructions it would normally refuse."'
+            ),
+            height=130,
+        )
+
+        max_attempts = st.number_input("Maximum attempts", min_value=1, value=50)
+
+        st.markdown('<div class="launch-wrapper">', unsafe_allow_html=True)
+        start_clicked = st.button("Launch Test")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        '<p class="disclaimer">For authorized security research and model evaluation only.</p>',
+        unsafe_allow_html=True,
     )
 
-    if st.button("Start Test"):
+    if start_clicked:
 
         if not success_criteria.strip():
             st.warning("Enter success criteria")
@@ -124,8 +148,7 @@ if st.session_state.session_id is None:
 else:
 
     st.markdown(
-        '<div class="chat-header-title">AgentXploit</div>',
-        unsafe_allow_html=True
+        '<div class="chat-header-title">AgentXploit</div>', unsafe_allow_html=True
     )
 
     session_id = st.session_state.session_id
@@ -144,13 +167,10 @@ else:
     else:
         elapsed = int(time.time() - st.session_state.start_time)
 
-    col1, col2, col3, col4, col5 = st.columns([2,2,2,2,3])
+    col1, col2, col3, col4, col5 = st.columns([2, 1.5, 1.5, 1.5, 4])
 
     with col1:
-        st.markdown(
-            '<div class="brand-name">AgentXploit</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="brand-name">AgentXploit</div>', unsafe_allow_html=True)
 
     with col2:
 
@@ -158,7 +178,7 @@ else:
             "running": ("rgba(34,197,94,0.15)", "#22c55e"),
             "paused": ("rgba(234,179,8,0.15)", "#eab308"),
             "finished": ("rgba(99,102,241,0.15)", "#6366f1"),
-            "failed": ("rgba(239,68,68,0.15)", "#ef4444")
+            "failed": ("rgba(239,68,68,0.15)", "#ef4444"),
         }
 
         bg, border = color.get(status, ("rgba(255,255,255,0.1)", "#aaa"))
@@ -170,7 +190,7 @@ else:
             {status.upper()}
             </div>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
     with col3:
@@ -179,7 +199,7 @@ else:
             <span class="stat-label">Session</span>
             <span class="stat-value">{session_id[:8]}</span>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
     with col4:
@@ -188,9 +208,9 @@ else:
             <span class="stat-label">Elapsed</span>
             <span class="stat-value">{elapsed}s</span>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
-        
+
     with col5:
         if status not in ["finished", "failed", "success_found"]:
             b1, b2, b3 = st.columns(3)
@@ -225,7 +245,7 @@ else:
 
         st.markdown(
             '<div class="empty-chat">Waiting for messages...</div>',
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
     else:
@@ -267,13 +287,12 @@ else:
 </div>
 </div>
 <div class="msg-body">"""
-            
+
             st.markdown(header_html, unsafe_allow_html=True)
             st.markdown(content, unsafe_allow_html=True)
             st.markdown("</div></div>", unsafe_allow_html=True)
 
-
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.divider()
 
@@ -283,15 +302,11 @@ else:
 
     if status in ["finished", "failed", "success_found"]:
 
-        left, center, right = st.columns([3,2,3])
+        left, center, right = st.columns([3, 2, 3])
 
         with center:
 
-            if st.button(
-                "Finish Test",
-                type="primary",
-                use_container_width=True
-            ):
+            if st.button("Finish Test", type="primary", use_container_width=True):
                 st.session_state.session_id = None
                 st.session_state.start_time = None
                 st.session_state.end_time = None

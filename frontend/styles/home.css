@@ -1,3 +1,79 @@
+
+/* =========================================================
+   AgentXploit - Home / Configuration page
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-0:        #07080c;
+    --bg-1:        #0b0d14;
+    --panel:       rgba(255, 255, 255, 0.035);
+    --panel-brd:   rgba(255, 255, 255, 0.09);
+    --field:       rgba(255, 255, 255, 0.04);
+    --field-brd:   rgba(255, 255, 255, 0.12);
+    --txt-hi:      #f4f5f7;
+    --txt:         #c5c9d3;
+    --txt-mut:     #6b7180;
+    --accent:      #ffb020;   /* amber */
+    --accent-2:    #ff6b4a;   /* coral */
+    --accent-soft: rgba(255, 176, 32, 0.14);
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-body:    'Hanken Grotesk', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+}
+
+/* ── Background: layered grid + radial glow ── */
+.stApp {
+    background:
+        radial-gradient(900px 480px at 50% -8%, rgba(255, 176, 32, 0.10), transparent 60%),
+        radial-gradient(700px 500px at 85% 110%, rgba(255, 107, 74, 0.07), transparent 60%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-0) 70%);
+    min-height: 100vh;
+}
+
+/* faint engineering grid overlay */
+.stApp::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);
+            mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.block-container {
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    padding-top: 0.01rem !important;
+    padding-bottom: 0.01rem !important;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ── Header block ── */
+.ax-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 0.9rem;
+   
+}
+.ax-eyebrow::before { content: "› "; opacity: 0.6; }
+
+
 /* ── Background ── */
 body,
 [data-testid="stAppViewContainer"] {
@@ -27,18 +103,121 @@ body,
 
 /* ── Typography ── */
 .page-title {
+    font-family: var(--font-display) !important;
     text-align: center;
-    font-size: 2.6rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    background: linear-gradient(90deg, #ffffff 0%, #a5b4fc 100%);
+    font-size: 3.4rem !important;
+    font-weight: 800 !important;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    color: var(--txt-hi);
+    margin: 0 0 0.5rem 0 !important;
+}
+.page-title span {
+    background: linear-gradient(100deg, var(--accent), var(--accent-2));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin: 0 0 0.4rem 0;
 }
 
 .page-subtitle {
     text-align: center;
+
+    font-family: var(--font-body);
+    font-size: 0.96rem;
+    color: var(--txt-mut);
+    margin-bottom: 2.2rem;
+
+}
+
+/* ── Form card (st.container(border=True)) ── */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--panel) !important;
+    border: 1px solid var(--panel-brd) !important;
+    border-radius: 16px !important;
+    padding: 1.9rem 1.9rem 2rem !important;
+    backdrop-filter: blur(14px);
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.form-card-head {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--txt-mut);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: center;
+}
+
+/* ── Widget labels → mono tech labels ── */
+[data-testid="stWidgetLabel"] p,
+.stSelectbox label p,
+.stTextArea label p,
+.stNumberInput label p {
+    font-family: var(--font-mono) !important;
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--txt) !important;
+}
+
+/* ── Inputs (shared) ── */
+div[data-baseweb="select"] > div,
+div[data-baseweb="textarea"],
+div[data-baseweb="base-input"],
+.stNumberInput div[data-baseweb="input"] {
+    background: var(--field) !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--field-brd) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="textarea"]:focus-within,
+.stNumberInput div[data-baseweb="input"]:focus-within {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-soft) !important;
+}
+
+/* Text inside every input is light & readable (fixes the black-on-dark bug) */
+input,
+textarea,
+div[data-baseweb="select"] *,
+.stTextArea textarea,
+.stNumberInput input {
+    color: var(--txt-hi) !important;
+    font-family: var(--font-body) !important;
+    -webkit-text-fill-color: var(--txt-hi) !important;
+}
+textarea { line-height: 1.55 !important; }
+::placeholder { color: var(--txt-mut) !important; opacity: 1; }
+
+/* Dropdown popover menu → dark, matches the theme */
+div[data-baseweb="popover"] ul[role="listbox"],
+div[data-baseweb="popover"] [role="listbox"] {
+    background: #12141c !important;
+    border: 1px solid var(--field-brd) !important;
+    border-radius: 10px !important;
+}
+li[role="option"] { color: var(--txt) !important; }
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {
+    background: var(--accent-soft) !important;
+    color: var(--txt-hi) !important;
+}
+
+/* Number-input +/- steppers */
+.stNumberInput button {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-left: 1px solid var(--field-brd) !important;
+    border-color: #07080c;
+    color: var(--txt) !important;
     font-size: 0.95rem;
     color: #94a3b8;
     margin-bottom: 2.4rem;
@@ -121,6 +300,70 @@ li[role="option"][aria-selected="true"] {
     color: #64748b !important;
     opacity: 1 !important;
 }
+.stNumberInput button:hover { color: var(--accent) !important; }
+
+
+div[data-testid="stButton"] {
+    display: flex !important;
+    justify-content: center !important;
+    width: 410px;
+}
+
+.launch-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 1.2rem;
+}
+
+textarea::placeholder {
+    color: #6b7180 !important;
+}
+
+.stTextArea textarea {
+    background: rgba(255,255,255,0.04) !important;
+    border-radius: 10px !important;
+}
+
+.stTextArea textarea:focus {
+    color: #f4f5f7 !important;
+}
+
+/* ── Primary CTA (st.button) ── */
+div[data-testid="stButton"] > button {
+    width: 410px !important;
+    margin-top: 0.4rem !important;
+    background: linear-gradient(100deg, var(--accent), var(--accent-2)) !important;
+    color: #1a0d00 !important;
+    border: none !important;
+    border-radius: 11px !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    padding: 0.78rem 0 !important;
+    box-shadow: 0 8px 24px rgba(255, 134, 40, 0.32) !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
+}
+div[data-testid="stButton"] > button:hover {
+    transform: translateY(-2px) !important;
+    filter: brightness(1.05) !important;
+    box-shadow: 0 12px 32px rgba(255, 134, 40, 0.45) !important;
+}
+div[data-testid="stButton"] > button:active { transform: translateY(0) !important; }
+
+/* ── Disclaimer ── */
+.disclaimer {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--txt-mut);
+    margin-top: 1.1rem;
+}
+
+/* Tidy default Streamlit warning/error spacing */
+div[data-testid="stAlert"] { border-radius: 10px !important; margin-top: 0.6rem; }
 
 /* ── Buttons ── */
 div[data-testid="stButton"] > button {
@@ -149,3 +392,4 @@ div[data-testid="stButton"] > button[data-testid="baseButton-secondary"]:only-ch
     padding: 0.7rem !important;
     box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
 }
+
