@@ -69,6 +69,7 @@ services:
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}      # injected from the .env file at project root
       - OLLAMA_URL=http://ollama:11434        # Docker resolves "ollama" to the service above
+      - OLLAMA_HOST=http://ollama:11434       # used by Garak subprocess to reach Ollama
       - DB_PATH=/data/agentxploit.db         # SQLite file inside the persistent volume below
     volumes:
       - db_data:/data                        # session history survives container restarts

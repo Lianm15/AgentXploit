@@ -354,6 +354,17 @@ div[data-testid="stButton"] > button[kind="primary"]:hover{
     background: linear-gradient(135deg, #059669, #10b981);
 }
 
+.avatar-tool {
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
+    font-size: 0.6rem;
+}
+
+.msg-card-tool {
+    border-left-color: #14b8a6;
+    background: rgba(20, 184, 166, 0.04);
+    opacity: 0.82;
+}
+
 /* ── Message metadata ── */
 .msg-meta {
     display: flex;
