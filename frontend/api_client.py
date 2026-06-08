@@ -46,3 +46,8 @@ class ApiClient:
         )
         res.raise_for_status()
         return res.json()
+
+    def get_stats(self):
+        res = requests.get(f"{self.base_url}/api/stats")
+        res.raise_for_status()
+        return res.json()

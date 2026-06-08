@@ -67,6 +67,34 @@ class EvaluateRequest(BaseModel):
 class EvaluateResponse(BaseModel):
     judgement: str
 
+class ModelStats(BaseModel):
+    model: str
+    attacks: int
+    successes: int
+    success_rate: float
+    avg_duration_seconds: float
+
+class StatusCount(BaseModel):
+    status: str
+    count: int
+
+class StatsResponse(BaseModel):
+    total_sessions: int
+    successful_attacks: int
+    failed_attacks: int
+    success_rate: float
+    avg_duration_seconds: float
+    fastest_success_seconds: Optional[float]
+    longest_attack_seconds: Optional[float]
+    avg_attempts_per_session: Optional[float]
+    avg_attempts_until_success: Optional[float]
+    total_prompts_generated: int
+    total_target_responses: int
+    error_sessions: int
+    per_model: List[ModelStats]
+    status_distribution: List[StatusCount]
+    recent_history: List[dict]
+
 def initialize(target_model: str, success_criteria: str, max_attempts: int) -> InitializeResponse:
     session_id = str(uuid.uuid4())  
 
@@ -367,6 +395,136 @@ def get_history() -> list:
     conn.close()
     # convert each SQLite row to a Python dict so FastAPI can return it as JSON
     return [dict(row) for row in rows]
+
+def get_stats() -> StatsResponse:
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # 1. Overview totals from completed results
+    cursor.execute("""
+        SELECT
+            COUNT(*) AS total_sessions,
+            SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS successful_attacks,
+            SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) AS failed_attacks,
+            ROUND(100.0 * AVG(CAST(success AS FLOAT)), 1) AS success_rate,
+            ROUND(AVG(time_elapsed), 1) AS avg_duration_seconds,
+            ROUND(MIN(CASE WHEN success = 1 THEN time_elapsed END), 1) AS fastest_success_seconds,
+            ROUND(MAX(time_elapsed), 1) AS longest_attack_seconds
+        FROM results
+    """)
+    overview = cursor.fetchone()
+
+    # 2. Avg attempts per completed session — COUNT(sender='target') per session
+    cursor.execute("""
+        SELECT ROUND(AVG(target_count), 1)
+        FROM (
+            SELECT m.session_id, COUNT(*) AS target_count
+            FROM messages m
+            JOIN results r ON m.session_id = r.session_id
+            WHERE m.sender = 'target'
+            GROUP BY m.session_id
+        )
+    """)
+    row = cursor.fetchone()
+    avg_attempts_per_session = row[0] if row and row[0] is not None else None
+
+    # 3. Avg attempts until success — same count, successful sessions only
+    cursor.execute("""
+        SELECT ROUND(AVG(target_count), 1)
+        FROM (
+            SELECT m.session_id, COUNT(*) AS target_count
+            FROM messages m
+            JOIN results r ON m.session_id = r.session_id
+            WHERE m.sender = 'target' AND r.success = 1
+            GROUP BY m.session_id
+        )
+    """)
+    row = cursor.fetchone()
+    avg_attempts_until_success = row[0] if row and row[0] is not None else None
+
+    # 4. Total prompts and responses by sender
+    cursor.execute("""
+        SELECT
+            SUM(CASE WHEN sender = 'attacker' THEN 1 ELSE 0 END) AS total_prompts,
+            SUM(CASE WHEN sender = 'target'   THEN 1 ELSE 0 END) AS total_responses
+        FROM messages
+    """)
+    sender_totals = cursor.fetchone()
+
+    # 5. Per-model breakdown
+    cursor.execute("""
+        SELECT
+            target_model AS model,
+            COUNT(*) AS attacks,
+            SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS successes,
+            ROUND(100.0 * AVG(CAST(success AS FLOAT)), 1) AS success_rate,
+            ROUND(AVG(time_elapsed), 1) AS avg_duration_seconds
+        FROM results
+        GROUP BY target_model
+        ORDER BY attacks DESC
+    """)
+    per_model_rows = cursor.fetchall()
+
+    # 6. Completed-attack outcome distribution — JOIN results with sessions so
+    #    only sessions that ran to completion are included (matches Overview population)
+    cursor.execute("""
+        SELECT s.status, COUNT(*) AS count
+        FROM results r
+        JOIN sessions s ON r.session_id = s.session_id
+        GROUP BY s.status
+        ORDER BY count DESC
+    """)
+    status_rows = cursor.fetchall()
+
+    # 7. Operational errors — sessions that crashed before writing a result row
+    cursor.execute("""
+        SELECT COUNT(*) FROM sessions
+        WHERE status = 'failed'
+        AND session_id NOT IN (SELECT session_id FROM results)
+    """)
+    error_row = cursor.fetchone()
+    error_sessions = error_row[0] if error_row and error_row[0] is not None else 0
+
+    # 8. Recent history — last 10 completed results
+    cursor.execute("""
+        SELECT session_id, target_model, time_elapsed, messages_count, success
+        FROM results
+        ORDER BY rowid DESC
+        LIMIT 10
+    """)
+    history_rows = cursor.fetchall()
+    conn.close()
+
+    return StatsResponse(
+        total_sessions=overview["total_sessions"] or 0,
+        successful_attacks=overview["successful_attacks"] or 0,
+        failed_attacks=overview["failed_attacks"] or 0,
+        success_rate=overview["success_rate"] or 0.0,
+        avg_duration_seconds=overview["avg_duration_seconds"] or 0.0,
+        fastest_success_seconds=overview["fastest_success_seconds"],
+        longest_attack_seconds=overview["longest_attack_seconds"],
+        avg_attempts_per_session=avg_attempts_per_session,
+        avg_attempts_until_success=avg_attempts_until_success,
+        total_prompts_generated=sender_totals["total_prompts"] or 0,
+        total_target_responses=sender_totals["total_responses"] or 0,
+        error_sessions=error_sessions,
+        per_model=[
+            ModelStats(
+                model=row["model"],
+                attacks=row["attacks"],
+                successes=row["successes"],
+                success_rate=row["success_rate"] or 0.0,
+                avg_duration_seconds=row["avg_duration_seconds"] or 0.0,
+            )
+            for row in per_model_rows
+        ],
+        status_distribution=[
+            StatusCount(status=row["status"], count=row["count"])
+            for row in status_rows
+        ],
+        recent_history=[dict(row) for row in history_rows],
+    )
+
 
 def handle_session_control(session_id: str, action: str) -> ActionResponse:
     conn = get_connection()

@@ -1,3 +1,4 @@
+
 /* =========================================================
    AgentXploit - Home / Configuration page
    ========================================================= */
@@ -72,6 +73,35 @@
 }
 .ax-eyebrow::before { content: "› "; opacity: 0.6; }
 
+
+/* ── Background ── */
+body,
+[data-testid="stAppViewContainer"] {
+    background-color: #0a0a1a !important;
+}
+
+.stApp {
+    background: linear-gradient(135deg, #0a0a1a, #0f1629, #1a1a3e);
+    min-height: 100vh;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0a0a1a, #0f1629) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+
+.block-container {
+    max-width: 680px !important;
+    margin: 0 auto !important;
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+}
+
+/* ── Typography ── */
 .page-title {
     font-family: var(--font-display) !important;
     text-align: center;
@@ -91,6 +121,7 @@
 
 .page-subtitle {
     text-align: center;
+
     font-family: var(--font-body);
     font-size: 0.96rem;
     color: var(--txt-mut);
@@ -187,8 +218,90 @@ li[role="option"][aria-selected="true"] {
     border-left: 1px solid var(--field-brd) !important;
     border-color: #07080c;
     color: var(--txt) !important;
+    font-size: 0.95rem;
+    color: #94a3b8;
+    margin-bottom: 2.4rem;
+}
+
+.field-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 0.15rem;
+    letter-spacing: 0.01em;
+}
+
+.field-desc {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 0.55rem;
+}
+
+/* ── Streamlit widget labels ── */
+label, p, .stMarkdown p {
+    color: #f1f5f9 !important;
+}
+
+/* ── Form inputs — outer container ── */
+div[data-baseweb="select"] > div,
+div[data-baseweb="textarea"] > div,
+div[data-baseweb="input"] > div,
+div[data-baseweb="number-input"] > div {
+    background: #0f1629 !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="textarea"] > div:focus-within,
+div[data-baseweb="input"] > div:focus-within,
+div[data-baseweb="number-input"] > div:focus-within {
+    border-color: rgba(99, 102, 241, 0.7) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
+}
+
+/* Inner input/textarea elements */
+input, textarea {
+    background: transparent !important;
+    color: #f1f5f9 !important;
+    caret-color: #a5b4fc !important;
+}
+
+/* Select box — all inner text */
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] div,
+div[data-baseweb="select"] * {
+    background: transparent !important;
+    color: #f1f5f9 !important;
+}
+
+/* Dropdown popover panel */
+[data-baseweb="popover"],
+[data-baseweb="popover"] > div,
+ul[data-baseweb="menu"],
+[data-baseweb="menu"] {
+    background: #1a2540 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 10px !important;
+}
+
+li[role="option"] {
+    background: transparent !important;
+    color: #e2e8f0 !important;
+}
+
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {
+    background: rgba(99, 102, 241, 0.2) !important;
+    color: #f1f5f9 !important;
+}
+
+::placeholder {
+    color: #64748b !important;
+    opacity: 1 !important;
 }
 .stNumberInput button:hover { color: var(--accent) !important; }
+
 
 div[data-testid="stButton"] {
     display: flex !important;
@@ -251,3 +364,32 @@ div[data-testid="stButton"] > button:active { transform: translateY(0) !importan
 
 /* Tidy default Streamlit warning/error spacing */
 div[data-testid="stAlert"] { border-radius: 10px !important; margin-top: 0.6rem; }
+
+/* ── Buttons ── */
+div[data-testid="stButton"] > button {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    transition: all 0.15s !important;
+}
+
+div[data-testid="stButton"] > button:hover {
+    background: rgba(255, 255, 255, 0.13) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    color: #f8fafc !important;
+}
+
+/* Start Test button — full-width primary CTA */
+div[data-testid="stButton"] > button[kind="secondaryFormSubmit"],
+div[data-testid="stButton"] > button[data-testid="baseButton-secondary"]:only-child {
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    color: #ffffff !important;
+    border: none !important;
+    width: 100% !important;
+    padding: 0.7rem !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
+}
+

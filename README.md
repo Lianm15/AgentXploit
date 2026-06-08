@@ -84,11 +84,12 @@ docker compose logs -f ollama-init
 
 Once the frontend is ready, open:
 
-| Service  | URL                        |
-|----------|----------------------------|
-| Frontend | http://localhost:8501      |
-| Backend  | http://localhost:8000      |
-| Swagger  | http://localhost:8000/docs |
+| Service    | URL                             |
+|------------|---------------------------------|
+| Frontend   | http://localhost:8501           |
+| Statistics | http://localhost:8501/stats     |
+| Backend    | http://localhost:8000           |
+| Swagger    | http://localhost:8000/docs      |
 
 ### Add more target models
 

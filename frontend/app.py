@@ -15,10 +15,13 @@ st.set_page_config(page_title="AgentXploit", layout="wide")
 st.markdown(
     """
     <style>
-    [data-testid="stDeployButton"] { display: none !important; }
-    [data-testid="stToolbar"] { display: none !important; }
-    #MainMenu { display: none !important; }
-    header { display: none !important; }
+    [data-testid="stHeader"], header  { display: none !important; }
+    [data-testid="stSidebar"],
+    [data-testid="stSidebarNav"]      { display: none !important; }
+    [data-testid="stDeployButton"]    { display: none !important; }
+    [data-testid="stToolbar"]         { display: none !important; }
+    #MainMenu                         { display: none !important; }
+    section[data-testid="stMain"] > div { padding-top: 0 !important; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -67,6 +70,10 @@ else:
 # ==========================
 
 if st.session_state.session_id is None:
+
+    _, nav_col = st.columns([8, 2])
+    with nav_col:
+        st.page_link("pages/stats.py", label="Statistics")
 
     st.markdown(
         '<h1 class="page-title">Agent<span>Xploit</span></h1>', unsafe_allow_html=True
@@ -251,16 +258,19 @@ else:
 
             if sender == "attacker":
                 avatar_class = "avatar avatar-ax"
+                card_class = "msg-card msg-card-attacker"
                 name = "AgentXploit"
                 avatar_text = "AX"
 
             elif sender == "target":
-                avatar_class = "avatar avatar-ai"
+                avatar_class = "avatar avatar-target"
+                card_class = "msg-card msg-card-target"
                 name = "Target Model"
                 avatar_text = "AI"
 
             else:
-                avatar_class = "avatar avatar-ai"
+                avatar_class = "avatar avatar-judge"
+                card_class = "msg-card msg-card-judge"
                 name = "Judge"
                 avatar_text = "J"
 
@@ -268,7 +278,7 @@ else:
             content = normalize_message_content(raw_content)
 
             # Render header and metadata
-            header_html = f"""<div class="msg-card">
+            header_html = f"""<div class="{card_class}">
 <div class="msg-header">
 <div class="{avatar_class}">{avatar_text}</div>
 <div class="msg-meta">
