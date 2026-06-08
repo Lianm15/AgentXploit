@@ -53,6 +53,9 @@
     padding-bottom: 0.01rem !important;
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* ── Header block ── */
@@ -114,9 +117,10 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--txt-mut);
-    padding-bottom: 1.1rem;
+    padding-bottom: 0.5rem;
     margin-bottom: 0.4rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: center;
 }
 
 /* ── Widget labels → mono tech labels ── */
@@ -181,6 +185,7 @@ li[role="option"][aria-selected="true"] {
 .stNumberInput button {
     background: rgba(255, 255, 255, 0.05) !important;
     border-left: 1px solid var(--field-brd) !important;
+    border-color: #07080c;
     color: var(--txt) !important;
 }
 .stNumberInput button:hover { color: var(--accent) !important; }
@@ -188,11 +193,32 @@ li[role="option"][aria-selected="true"] {
 div[data-testid="stButton"] {
     display: flex !important;
     justify-content: center !important;
+    width: 410px;
+}
+
+.launch-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 1.2rem;
+}
+
+textarea::placeholder {
+    color: #6b7180 !important;
+}
+
+.stTextArea textarea {
+    background: rgba(255,255,255,0.04) !important;
+    border-radius: 10px !important;
+}
+
+.stTextArea textarea:focus {
+    color: #f4f5f7 !important;
 }
 
 /* ── Primary CTA (st.button) ── */
 div[data-testid="stButton"] > button {
-    width: 100% !important;
+    width: 410px !important;
     margin-top: 0.4rem !important;
     background: linear-gradient(100deg, var(--accent), var(--accent-2)) !important;
     color: #1a0d00 !important;

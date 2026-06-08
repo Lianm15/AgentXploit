@@ -28,7 +28,7 @@
 
 /* Center the whole page in a contained column -> fixes left cut-off */
 .block-container {
-    max-width:960px !important;
+    max-width:800px !important;
     margin:0 auto !important;
     padding:1.2rem 1.5rem 2.5rem !important;
 }
@@ -52,6 +52,7 @@ div[data-testid="stHorizontalBlock"]:first-of-type{
     backdrop-filter:blur(12px);
     align-items:center;
     gap:20px;
+    width: 800px;
 }
 
 
@@ -86,7 +87,7 @@ div[data-testid="stHorizontalBlock"]:first-of-type{
 
 /* Give the nested control-button columns breathing room */
 div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"]{
-    gap:0.5rem !important;
+    gap:24px !important;
 }
 
 /* ── Control buttons ── */

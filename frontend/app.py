@@ -103,7 +103,9 @@ if st.session_state.session_id is None:
 
         max_attempts = st.number_input("Maximum attempts", min_value=1, value=50)
 
-        start_clicked = st.button("Launch Test  →")
+        st.markdown('<div class="launch-wrapper">', unsafe_allow_html=True)
+        start_clicked = st.button("Launch Test")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(
         '<p class="disclaimer">For authorized security research and model evaluation only.</p>',
