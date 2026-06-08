@@ -58,12 +58,6 @@ p, label, .stMarkdown p, .stMarkdown span, .stText {
     color: #e2e8f0 !important;
 }
 
-.block-container {
-    padding-top: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    max-width: 100% !important;
-}
 
 /* ── Navbar row ── */
 div[data-testid="stHorizontalBlock"]:first-of-type {
@@ -233,7 +227,7 @@ div[data-testid="stHorizontalBlock"]:first-of-type{
     backdrop-filter:blur(12px);
     align-items:center;
     gap:20px;
-    width: 1000px;
+     width: 1000px;
     display:flex;
     justify-content:space-between;
 }
@@ -278,7 +272,7 @@ div[data-testid="stHorizontalBlock"]{
 
 /* Give the nested control-button columns breathing room */
 div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"]{
-    gap:20px !important;
+     gap:20px !important;
 }
 
 /* ── Control buttons ── */
@@ -399,4 +393,3 @@ div[data-testid="stButton"] > button[kind="primary"]:hover{
     color: #f1f5f9;
     margin-bottom: 10px;
 }
-
