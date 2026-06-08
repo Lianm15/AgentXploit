@@ -111,7 +111,7 @@ if st.session_state.session_id is None:
         max_attempts = st.number_input("Maximum attempts", min_value=1, value=50)
 
         st.markdown('<div class="launch-wrapper">', unsafe_allow_html=True)
-        start_clicked = st.button("Launch Test")
+        start_clicked = st.button("Launch Test", key="launch_test")
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(
