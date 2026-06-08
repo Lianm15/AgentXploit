@@ -29,7 +29,7 @@
 
 /* Center the whole page in a contained column -> fixes left cut-off */
 .block-container {
-    max-width:800px !important;
+    max-width: 1000px !important;
     margin:0 auto !important;
     padding:1.2rem 1.5rem 2.5rem !important;
 }
@@ -233,9 +233,19 @@ div[data-testid="stHorizontalBlock"]:first-of-type{
     backdrop-filter:blur(12px);
     align-items:center;
     gap:20px;
-    width: 800px;
+    width: 1000px;
+    display:flex;
+    justify-content:space-between;
 }
 
+ .status-pill{
+    white-space:nowrap;
+    flex-shrink:0;
+} 
+
+div[data-testid="stHorizontalBlock"]{
+    align-items:center;
+} 
 
 .brand-name{
     display:inline-flex; align-items:center; gap:0.5rem;
@@ -268,17 +278,25 @@ div[data-testid="stHorizontalBlock"]:first-of-type{
 
 /* Give the nested control-button columns breathing room */
 div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"]{
-    gap:24px !important;
+    gap:20px !important;
 }
 
 /* ── Control buttons ── */
 div[data-testid="stButton"] > button{
     border-radius:8px !important;
-    font-family:var(--font-mono) !important; font-size:0.72rem !important; font-weight:600 !important;
+    font-family:var(--font-mono) !important;
+    font-size:0.72rem !important;
+    font-weight:600 !important;
     letter-spacing:0.02em !important;
-    padding:0.42rem 0.4rem !important;
-    border:1px solid var(--field-brd) !important; background:var(--field) !important; color:var(--txt) !important;
-    transition:all 0.15s !important; width:100% !important; min-width:0 !important; white-space:nowrap !important;
+    min-width:90px !important;
+
+    height:38px !important;
+
+    border:1px solid var(--field-brd) !important;
+    background:var(--field) !important;
+    color:var(--txt) !important;
+
+    transition:all 0.15s !important;
 }
 div[data-testid="stButton"] > button:hover:not(:disabled){
     background:var(--accent-soft) !important; border-color:var(--accent) !important; color:var(--txt-hi) !important;
@@ -334,7 +352,6 @@ div[data-testid="stButton"] > button[kind="primary"]:hover{
     text-align:center; color:var(--txt-mut);
     font-family:var(--font-mono); letter-spacing:0.04em; padding:3.5rem 0; font-size:0.82rem;
 }
-=======
 .avatar-target {
     background: linear-gradient(135deg, #7c3aed, #8b5cf6);
 }

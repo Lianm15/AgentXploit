@@ -156,6 +156,9 @@ else:
     status_response = client.get_status(session_id)
     status = status_response["status"]
 
+    is_active = status in ["running", "paused"]
+    is_finished = status in ["finished", "failed", "success_found"]
+
     # save finish time
     if status in ["finished", "failed", "success_found"]:
         if st.session_state.end_time is None:
@@ -179,6 +182,7 @@ else:
             "paused": ("rgba(234,179,8,0.15)", "#eab308"),
             "finished": ("rgba(99,102,241,0.15)", "#6366f1"),
             "failed": ("rgba(239,68,68,0.15)", "#ef4444"),
+            "success_found": ("rgba(34,197,94,0.15)", "#22c55e"),
         }
 
         bg, border = color.get(status, ("rgba(255,255,255,0.1)", "#aaa"))
@@ -212,20 +216,31 @@ else:
         )
 
     with col5:
-        if status not in ["finished", "failed", "success_found"]:
-            b1, b2, b3 = st.columns(3)
-            with b1:
-                if st.button("Pause"):
-                    client.session_control(session_id, "pause")
-                    st.rerun()
-            with b2:
-                if st.button("Resume"):
-                    client.session_control(session_id, "resume")
-                    st.rerun()
-            with b3:
-                if st.button("Stop"):
-                    client.session_control(session_id, "stop")
-                    st.rerun()
+
+        if is_active:
+
+                b1, b2, b3 = st.columns(3)
+
+                with b1:
+                    if st.button("Pause", use_container_width=True):
+                        client.session_control(session_id, "pause")
+                        st.rerun()
+
+                with b2:
+                    if st.button("Resume", use_container_width=True):
+                        client.session_control(session_id, "resume")
+                        st.rerun()
+
+                with b3:
+                    if st.button("Stop", use_container_width=True):
+                        client.session_control(session_id, "stop")
+                        st.rerun()
+
+        else:
+            st.markdown(
+                '<div style="height:38px;"></div>',
+                unsafe_allow_html=True
+            )
     st.divider()
 
     # ==========================
@@ -300,7 +315,7 @@ else:
     # FINISH BUTTON
     # ==========================
 
-    if status in ["finished", "failed", "success_found"]:
+    if is_finished:
 
         left, center, right = st.columns([3, 2, 3])
 
@@ -316,6 +331,6 @@ else:
     # AUTO REFRESH
     # ==========================
 
-    if status not in ["finished", "failed", "success_found"]:
+    if status in ["running", "paused"]:
         time.sleep(1)
         st.rerun()
