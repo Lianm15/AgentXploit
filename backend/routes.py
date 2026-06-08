@@ -9,6 +9,7 @@ from logic import run_attack_process
 from logic import SessionStatusResponse, get_session_status
 from logic import ActionRequest, ActionResponse, handle_session_control
 from logic import FinishTestResponse, get_tests_summary, EvaluateRequest, EvaluateResponse, evaluate_target_response
+from logic import get_stats, StatsResponse
 import logging
 
 router = APIRouter(prefix="/api") 
@@ -27,6 +28,15 @@ async def initialize(request: InitializeRequest) -> InitializeResponse:
         logger.error(f"Initialization failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error during initialization")
     
+
+@router.get("/stats", response_model=StatsResponse)
+async def get_stats_endpoint() -> StatsResponse:
+    try:
+        return get_stats()
+    except Exception as e:
+        logger.error(f"Error retrieving stats: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
+
 
 @router.get("/history")
 async def history():

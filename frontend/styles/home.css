@@ -1,7 +1,21 @@
 /* ── Background ── */
+body,
+[data-testid="stAppViewContainer"] {
+    background-color: #0a0a1a !important;
+}
+
 .stApp {
-    background: linear-gradient(135deg, #0f0c29, #1a1a3e, #24243e);
+    background: linear-gradient(135deg, #0a0a1a, #0f1629, #1a1a3e);
     min-height: 100vh;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0a0a1a, #0f1629) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
 }
 
 .block-container {
@@ -11,25 +25,7 @@
     padding-bottom: 3rem !important;
 }
 
-/* ── Header ── */
-.header-badge {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 1rem;
-}
-
-.badge {
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.4);
-    color: #a5b4fc;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.3rem 0.9rem;
-    border-radius: 999px;
-}
-
+/* ── Typography ── */
 .page-title {
     text-align: center;
     font-size: 2.6rem;
@@ -44,136 +40,112 @@
 .page-subtitle {
     text-align: center;
     font-size: 0.95rem;
-    color: #6b7280;
+    color: #94a3b8;
     margin-bottom: 2.4rem;
 }
 
-/* ── Form field labels ── */
 .field-label {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #e5e7eb;
+    color: #f1f5f9;
     margin-bottom: 0.15rem;
     letter-spacing: 0.01em;
 }
 
 .field-desc {
     font-size: 0.8rem;
-    color: #6b7280;
+    color: #94a3b8;
     margin-bottom: 0.55rem;
 }
 
-.card-divider {
-    border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
-    margin: 1.6rem 0;
+/* ── Streamlit widget labels ── */
+label, p, .stMarkdown p {
+    color: #f1f5f9 !important;
 }
 
-/* ── Inputs ── */
+/* ── Form inputs — outer container ── */
 div[data-baseweb="select"] > div,
 div[data-baseweb="textarea"] > div,
-div[data-baseweb="input"] > div {
-    background: rgba(255, 255, 255, 0.05) !important;
+div[data-baseweb="input"] > div,
+div[data-baseweb="number-input"] > div {
+    background: #0f1629 !important;
     border-radius: 10px !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
 }
 
 div[data-baseweb="select"] > div:focus-within,
 div[data-baseweb="textarea"] > div:focus-within,
-div[data-baseweb="input"] > div:focus-within {
-    border-color: rgba(99, 102, 241, 0.6) !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+div[data-baseweb="input"] > div:focus-within,
+div[data-baseweb="number-input"] > div:focus-within {
+    border-color: rgba(99, 102, 241, 0.7) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
 }
 
+/* Inner input/textarea elements */
+input, textarea {
+    background: transparent !important;
+    color: #f1f5f9 !important;
+    caret-color: #a5b4fc !important;
+}
+
+/* Select box — all inner text */
 div[data-baseweb="select"] span,
-div[data-baseweb="select"] input {
-    color: #f9fafb !important;
+div[data-baseweb="select"] div,
+div[data-baseweb="select"] * {
+    background: transparent !important;
+    color: #f1f5f9 !important;
 }
 
-/* ── Submit button ── */
-div[data-testid="stFormSubmitButton"] > button {
-    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
-    color: #ffffff !important;
-    border: none !important;
+/* Dropdown popover panel */
+[data-baseweb="popover"],
+[data-baseweb="popover"] > div,
+ul[data-baseweb="menu"],
+[data-baseweb="menu"] {
+    background: #1a2540 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 10px !important;
-    font-size: 0.95rem !important;
-    font-weight: 600 !important;
-    width: 100% !important;
-    padding: 0.7rem 3rem !important;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
-    transition: all 0.2s ease !important;
 }
 
-div[data-testid="stFormSubmitButton"] > button:hover {
-    background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.55) !important;
-    transform: translateY(-1px) !important;
+li[role="option"] {
+    background: transparent !important;
+    color: #e2e8f0 !important;
 }
 
-/* ── Disclaimer ── */
-.disclaimer {
-    text-align: center;
-    font-size: 0.78rem;
-    color: #374151;
-    margin-top: 0.6rem;
-}
-
-/* text color inside inputs */
-
-input {
-color: #f9fafb !important;
-}
-
-textarea {
-color: #f9fafb !important;
-}
-
-div[data-baseweb="select"] input {
-color: #f9fafb !important;
-}
-
-div[data-baseweb="select"] span {
-color: #f9fafb !important;
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {
+    background: rgba(99, 102, 241, 0.2) !important;
+    color: #f1f5f9 !important;
 }
 
 ::placeholder {
-color: #9ca3af !important;
-opacity: 1;
+    color: #64748b !important;
+    opacity: 1 !important;
 }
 
-div[data-baseweb="select"] {
-color: #f9fafb !important;
+/* ── Buttons ── */
+div[data-testid="stButton"] > button {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    transition: all 0.15s !important;
 }
 
-div[data-baseweb="select"] span{
-color:white !important;
+div[data-testid="stButton"] > button:hover {
+    background: rgba(255, 255, 255, 0.13) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    color: #f8fafc !important;
 }
 
-div[data-baseweb="select"] input{
-color:white !important;
-}
-
-div[data-baseweb="select"] *{
-color:white !important;
-}
-
-textarea{
-color:black !important;
-}
-
-input[type="number"]{
-color:black !important;
-}
-
-div[data-baseweb="input"] input{
-color:black !important;
-}
-
-textarea::placeholder{
-color:#888 !important;
-}
-
-.block-container{
-max-width:680px;
-margin:auto;
+/* Start Test button — full-width primary CTA */
+div[data-testid="stButton"] > button[kind="secondaryFormSubmit"],
+div[data-testid="stButton"] > button[data-testid="baseButton-secondary"]:only-child {
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    color: #ffffff !important;
+    border: none !important;
+    width: 100% !important;
+    padding: 0.7rem !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
 }
