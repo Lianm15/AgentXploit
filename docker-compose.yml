@@ -1,84 +1,35 @@
-# AgentXploit — Docker Compose
+# AgentXploit — Docker Compose (prod mode)
 #
-# Quick start:
-#   1. Copy .env.example to .env and set your GEMINI_API_KEY
+# Prod mode — backend + frontend only, connects to an external Ollama instance.
+#   1. Copy .env.example to .env and fill in your values
 #   2. docker compose up --build
+#
+# Dev mode — includes local Ollama + model bootstrap:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 #
 # URLs once running:
 #   Frontend  → http://localhost:8501
 #   Backend   → http://localhost:8000  (Swagger: http://localhost:8000/docs)
-#   Ollama    → http://localhost:11434
 
 services:
 
-  # ── Ollama: local LLM server ─────────────────────────────────────────────────
-  # Serves model inference via a REST API on port 11434.
-  ollama:
-    image: ollama/ollama:latest
-    # No host port mapping needed — backend and ollama-init reach Ollama
-    # via the Docker network using the service name "ollama".
-    volumes:
-      # Named volume keeps downloaded model weights across restarts (can be many GB)
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-    healthcheck:
-      # "ollama list" talks to the local server — no curl needed in this image
-      test: ["CMD", "ollama", "list"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
-    # ── GPU acceleration (Linux + nvidia-container-toolkit only) ──────────────
-    # Uncomment the block below to pass through an NVIDIA GPU:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
-
-  # ── Ollama model bootstrap ───────────────────────────────────────────────────
-  # Runs once after Ollama is healthy, pulls 5 lightweight models suited for
-  # jailbreak testing, then exits. Models are stored in the shared ollama_data
-  # volume so they persist across restarts and this service is a no-op on re-runs.
-  ollama-init:
-    image: ollama/ollama:latest
-    depends_on:
-      ollama:
-        condition: service_healthy
-    environment:
-      - OLLAMA_HOST=http://ollama:11434   # direct the CLI to the ollama service
-    entrypoint: ["/bin/sh", "-c",
-      "ollama pull llama3.2 &&
-       ollama pull mistral &&
-       ollama pull gemma:2b &&
-       ollama pull phi3:mini &&
-       ollama pull tinyllama"]
-    restart: "no"                          # run once per `docker compose up`, then exit
-
   # ── Backend: FastAPI REST API ─────────────────────────────────────────────────
-  # Handles attack sessions, communicates with Ollama and Gemini.
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-      target: backend          # builds only the "backend" stage from the shared Dockerfile
+      target: backend
     ports:
-      - "8000:8000"            # also exposes Swagger UI at http://localhost:8000/docs
+      - "8000:8000"
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}      # injected from the .env file at project root
-      - OLLAMA_URL=http://ollama:11434        # Docker resolves "ollama" to the service above
-      - OLLAMA_HOST=http://ollama:11434       # used by Garak subprocess to reach Ollama
-      - DB_PATH=/data/agentxploit.db         # SQLite file inside the persistent volume below
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
+      - OLLAMA_HOST=${OLLAMA_URL:-http://localhost:11434}
+      - DB_PATH=/data/agentxploit.db
     volumes:
-      - db_data:/data                        # session history survives container restarts
-    depends_on:
-      ollama-init:
-        condition: service_completed_successfully  # waits until all models are downloaded
+      - db_data:/data
     restart: unless-stopped
     healthcheck:
-      # python:3.12-slim has no curl; use the built-in urllib instead
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
       interval: 15s
       timeout: 5s
@@ -86,23 +37,20 @@ services:
       start_period: 10s
 
   # ── Frontend: Streamlit UI ────────────────────────────────────────────────────
-  # Browser-accessible UI; makes server-side requests to the backend container.
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
-      target: frontend         # builds only the "frontend" stage from the shared Dockerfile
+      target: frontend
     ports:
       - "8501:8501"
     environment:
-      - BACKEND_URL=http://backend:8000      # Docker resolves "backend" to the service above
+      - BACKEND_URL=http://backend:8000
     depends_on:
       backend:
-        condition: service_healthy           # waits until backend passes its health check
+        condition: service_healthy
     restart: unless-stopped
 
 # ── Persistent volumes ────────────────────────────────────────────────────────
-# Data here survives `docker compose down` but is removed by `docker compose down -v`.
 volumes:
-  ollama_data:   # downloaded Ollama model weights
-  db_data:       # SQLite database with session and message history
+  db_data:   # SQLite database with session and message history

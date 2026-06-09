@@ -1,0 +1,63 @@
+# AgentXploit — dev override
+#
+# Adds local Ollama server + model bootstrap, and wires the backend to them.
+# Use together with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Models are cached in the ollama_data volume and only downloaded on the first run.
+
+services:
+
+  # ── Ollama: local LLM server ─────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    # ── GPU acceleration (Linux + nvidia-container-toolkit only) ──────────────
+    # Uncomment to pass through an NVIDIA GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # ── Ollama model bootstrap ───────────────────────────────────────────────────
+  # Runs once, pulls lightweight models suited for jailbreak testing, then exits.
+  # Models persist in the shared ollama_data volume — this is a no-op on re-runs.
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["/bin/sh", "-c",
+      "ollama pull llama3.2 &&
+       ollama pull mistral &&
+       ollama pull gemma:2b &&
+       ollama pull phi3:mini &&
+       ollama pull tinyllama"]
+    restart: "no"
+
+  # ── Backend override — point to the local Ollama service ─────────────────────
+  backend:
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+
+# ── Dev-only volume ───────────────────────────────────────────────────────────
+volumes:
+  ollama_data:   # downloaded Ollama model weights
