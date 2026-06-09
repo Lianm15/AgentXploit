@@ -97,7 +97,7 @@ if st.session_state.session_id is None:
             unsafe_allow_html=True,
         )
 
-        selected_model = st.selectbox("Target model", models)
+        selected_model = st.selectbox("Target model", models, key="target_model")
 
         success_criteria = st.text_area(
             "Success criteria",
@@ -282,6 +282,23 @@ else:
                 card_class = "msg-card msg-card-target"
                 name = "Target Model"
                 avatar_text = "AI"
+
+            elif sender in (
+                "tool", "model_profile", "web_search",
+                "garak", "pyrit_converter", "pyrit_crescendo", "jailbreakbench"
+            ):
+                _TOOL_DISPLAY = {
+                    "model_profile":    ("Model Profile",   "MP"),
+                    "web_search":       ("Web Search",      "WS"),
+                    "garak":            ("Garak",           "GK"),
+                    "pyrit_converter":  ("PyRIT Converter", "PC"),
+                    "pyrit_crescendo":  ("PyRIT Crescendo", "PR"),
+                    "jailbreakbench":   ("JailbreakBench",  "JB"),
+                    "tool":             ("Tool",            "T"),
+                }
+                avatar_class = "avatar avatar-tool"
+                card_class = "msg-card msg-card-tool"
+                name, avatar_text = _TOOL_DISPLAY.get(sender, ("Tool", "T"))
 
             else:
                 avatar_class = "avatar avatar-judge"

@@ -5,6 +5,11 @@ pydantic-settings
 httpx
 python-dotenv
 google-genai
+requests
+duckduckgo-search
+garak
+pyrit
+jailbreakbench
 
 # Frontend
 streamlit

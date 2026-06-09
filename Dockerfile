@@ -4,6 +4,12 @@ FROM python:3.12-slim AS base
 
 WORKDIR /app
 
+# Build tools needed by garak's transitive deps (tokenizers, sentencepiece, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

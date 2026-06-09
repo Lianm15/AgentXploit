@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from logic import AttackConfig, AttackResult, InitializeResponse, Transcript, initialize as initialize_session
+from logic import InitializeResponse, Transcript, initialize as initialize_session
 from pydantic import BaseModel
 from typing import List
 from logic import get_messages, get_history
