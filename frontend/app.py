@@ -97,7 +97,7 @@ if st.session_state.session_id is None:
             unsafe_allow_html=True,
         )
 
-        selected_model = st.selectbox("Target model", models)
+        selected_model = st.selectbox("Target model", models, key="target_model")
 
         success_criteria = st.text_area(
             "Success criteria",
