@@ -399,6 +399,9 @@ class GeminiAttackSession:
                 print(f"[GEMINI-SESSION] Error: {err}")
                 if _is_quota_exceeded_error(err):
                     print(f"[GEMINI-SESSION] Quota exceeded — waiting {QUOTA_WAIT_SECONDS}s")
+                    if attempt == MAX_RETRIES:
+                        raise
+                    attempt += 1
                     time.sleep(QUOTA_WAIT_SECONDS)
                     continue
                 if not _is_retryable_error(err) or attempt == MAX_RETRIES:
@@ -433,6 +436,9 @@ def run_gemini_attack(prompt: str) -> str:
             print(f"[GEMINI-JUDGE] Attempt {attempt_no} — error: {err}")
             if _is_quota_exceeded_error(err):
                 print(f"[GEMINI-JUDGE] Quota exceeded — waiting {QUOTA_WAIT_SECONDS}s")
+                if attempt == MAX_RETRIES:
+                    raise
+                attempt += 1
                 time.sleep(QUOTA_WAIT_SECONDS)
                 continue
             if not _is_retryable_error(err) or attempt == MAX_RETRIES:

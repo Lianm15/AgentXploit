@@ -722,11 +722,16 @@ def get_stats() -> StatsResponse:
     error_row = cursor.fetchone()
     error_sessions = error_row[0] if error_row and error_row[0] is not None else 0
 
-    # 8. Recent history — last 10 completed results
+    # 8. Recent history — last 10 completed results, with accurate per-session
+    #    target message count so the frontend can display correct attempt numbers.
     cursor.execute("""
-        SELECT session_id, target_model, time_elapsed, messages_count, success
-        FROM results
-        ORDER BY rowid DESC
+        SELECT r.session_id, r.target_model, r.time_elapsed, r.messages_count,
+               r.success,
+               (SELECT COUNT(*) FROM messages m
+                WHERE m.session_id = r.session_id AND m.sender = 'target'
+               ) AS target_count
+        FROM results r
+        ORDER BY r.rowid DESC
         LIMIT 10
     """)
     history_rows = cursor.fetchall()

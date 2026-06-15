@@ -86,7 +86,7 @@ async def start_attack(session_id: str, background_tasks: BackgroundTasks):
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT 1 FROM sessions WHERE session_id = ?",
+            "SELECT status FROM sessions WHERE session_id = ?",
             (session_id,)
         )
         row = cursor.fetchone()
@@ -95,10 +95,18 @@ async def start_attack(session_id: str, background_tasks: BackgroundTasks):
         if not row:
             raise HTTPException(status_code=404, detail="Session not found")
 
+        if row["status"] != "initialized":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Session already started (status: {row['status']})",
+            )
+
         background_tasks.add_task(run_attack_process, session_id)
 
         return {"status": "Attack started in background"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error starting attack: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to start attack")

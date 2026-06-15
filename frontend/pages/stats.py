@@ -304,7 +304,7 @@ with tab_sessions:
                 "Session":      row["session_id"][:8],
                 "Model":        row["target_model"],
                 "Duration (s)": round(row["time_elapsed"], 1),
-                "Attempts":     row["messages_count"] // 3,
+                "Attempts":     row.get("target_count", row["messages_count"] // 3),
                 "Result":       "✓" if row["success"] in (1, True) else "✗",
             }
             for row in data["recent_history"]
