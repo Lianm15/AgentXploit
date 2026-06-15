@@ -5,6 +5,7 @@ from database import get_connection, save_technique_record
 from failure_classifier import FailureClassifier, FailureAnalysis, FailureType
 from compliance_scorer import ComplianceScorer, ComplianceResult
 from strategy_controller import AttackStrategyController, TECHNIQUE_INSTRUCTIONS
+from attack_memory import AttackMemory
 import uuid
 import time
 from datetime import datetime
@@ -468,7 +469,8 @@ def run_attack_process(session_id: str):
         gemini_session = GeminiAttackSession()
         classifier = FailureClassifier()
         scorer = ComplianceScorer()
-        controller = AttackStrategyController(session_id)
+        priors = AttackMemory().load_priors(target_model)
+        controller = AttackStrategyController(session_id, priors=priors)
 
         # ── First technique is always "direct" — establish a baseline ──────────
         # The controller selects all subsequent techniques from attempt 2 onward.
@@ -961,4 +963,16 @@ def get_session_intelligence(session_id: str) -> dict:
         "technique_history": technique_history,
         "best_technique": best_technique,
         "technique_stats": technique_stats,
+    }
+
+
+def get_intelligence_summary() -> dict:
+    """
+    Cross-session intelligence summary for the Intelligence dashboard tab.
+    Returns technique effectiveness per model and the global failure distribution.
+    """
+    memory = AttackMemory()
+    return {
+        "technique_effectiveness": memory.get_technique_effectiveness(),
+        "failure_distribution": memory.get_failure_distribution(),
     }

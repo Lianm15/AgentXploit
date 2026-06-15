@@ -10,7 +10,7 @@ from logic import SessionStatusResponse, get_session_status
 from logic import ActionRequest, ActionResponse, handle_session_control
 from logic import FinishTestResponse, get_tests_summary, EvaluateRequest, EvaluateResponse, evaluate_target_response
 from logic import get_stats, StatsResponse
-from logic import get_session_intelligence
+from logic import get_session_intelligence, get_intelligence_summary
 import logging
 
 router = APIRouter(prefix="/api") 
@@ -46,6 +46,17 @@ async def history():
     except Exception as e:
         logger.error(f"Error retrieving history: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error while retrieving history")
+
+
+# Must be registered before any /{session_id}/... routes so that FastAPI's
+# first-match routing does not capture "intelligence" as a session_id.
+@router.get("/intelligence/summary")
+async def get_intelligence_summary_endpoint():
+    try:
+        return get_intelligence_summary()
+    except Exception as e:
+        logger.error(f"Error retrieving intelligence summary: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve intelligence summary")
 
 
 @router.get("/{session_id}/messages", response_model=Transcript)

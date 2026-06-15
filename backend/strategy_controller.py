@@ -214,11 +214,15 @@ class AttackStrategyController:
 
     EXPLORATION_CONSTANT = 0.3
 
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, priors: dict | None = None):
         self.session_id = session_id
         self.history: list = []
         # Per-technique compliance scores; populated on record_attempt()
         self._scores: dict = {t.value: [] for t in Technique}
+        # Historical avg compliance per technique loaded from AttackMemory.
+        # Affects untried-technique selection order only; in-session scores take
+        # over as soon as a technique is tried in the current session.
+        self._priors: dict = priors or {}
 
     @property
     def total_attempts(self) -> int:
@@ -288,7 +292,8 @@ class AttackStrategyController:
 
             if not uses:
                 ucb = float("inf")
-                adjusted = _UNTRIED_BASE + (0.3 if is_preferred else 0.0)
+                historical_bonus = self._priors.get(t, 0.0)
+                adjusted = _UNTRIED_BASE + historical_bonus + (0.3 if is_preferred else 0.0)
             else:
                 ucb = self._ucb1_score(t)
                 adjusted = ucb + (0.3 if is_preferred else 0.0)

@@ -58,3 +58,8 @@ class ApiClient:
             return None
         res.raise_for_status()
         return res.json()
+
+    def get_intelligence_summary(self):
+        res = requests.get(f"{self.base_url}/api/intelligence/summary")
+        res.raise_for_status()
+        return res.json()
