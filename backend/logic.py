@@ -4,7 +4,7 @@ from gemini import run_gemini_attack, GeminiAttackSession
 from database import get_connection, save_technique_record
 from failure_classifier import FailureClassifier, FailureAnalysis, FailureType
 from compliance_scorer import ComplianceScorer, ComplianceResult
-from strategy_controller import AttackStrategyController
+from strategy_controller import AttackStrategyController, TECHNIQUE_INSTRUCTIONS
 import uuid
 import time
 from datetime import datetime
@@ -12,6 +12,13 @@ import os
 import requests
 
 _OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+_OLLAMA_MAX_RETRIES = int(os.getenv("OLLAMA_MAX_RETRIES", "3"))
+_OLLAMA_RETRY_DELAY = float(os.getenv("OLLAMA_RETRY_DELAY", "5"))
+_TRANSIENT_ERRORS = (
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.ChunkedEncodingError,
+)
 
 class Message(BaseModel):
     """Represents a single message in the transcript"""
@@ -209,19 +216,53 @@ def _get_session_config(session_id: str):
 
 
 def _run_local_model(target_model: str, prompt: str) -> str:
-    """Send a single prompt to the local Ollama model and return its text response."""
-    response = requests.post(
-        f"{_OLLAMA_URL}/api/generate",
-        json={
-            "model": target_model,
-            "prompt": prompt,
-            "stream": False,
-        },
-        timeout=120,
-    )
-    response.raise_for_status()
-    data = response.json()
-    return data.get("response", "").strip()
+    """Send a single prompt to the local Ollama model, retrying on transient errors."""
+    last_error: Exception = RuntimeError("no attempts made")
+    for attempt in range(1, _OLLAMA_MAX_RETRIES + 1):
+        try:
+            print(
+                f"[OLLAMA] model={target_model!r} "
+                f"attempt={attempt}/{_OLLAMA_MAX_RETRIES} — sending request"
+            )
+            response = requests.post(
+                f"{_OLLAMA_URL}/api/generate",
+                json={"model": target_model, "prompt": prompt, "stream": False},
+                timeout=120,
+            )
+            response.raise_for_status()
+            return response.json().get("response", "").strip()
+
+        except _TRANSIENT_ERRORS as e:
+            last_error = e
+            print(
+                f"[OLLAMA] model={target_model!r} "
+                f"attempt={attempt}/{_OLLAMA_MAX_RETRIES} "
+                f"— transient error: {type(e).__name__}: {e}"
+            )
+            if attempt < _OLLAMA_MAX_RETRIES:
+                print(f"[OLLAMA] retrying in {_OLLAMA_RETRY_DELAY}s ...")
+                time.sleep(_OLLAMA_RETRY_DELAY)
+
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+            if status is not None and status < 500:
+                raise RuntimeError(
+                    f"Target model '{target_model}' returned non-retryable HTTP {status}: {e}"
+                ) from e
+            last_error = e
+            print(
+                f"[OLLAMA] model={target_model!r} "
+                f"attempt={attempt}/{_OLLAMA_MAX_RETRIES} "
+                f"— server error HTTP {status}: {e}"
+            )
+            if attempt < _OLLAMA_MAX_RETRIES:
+                print(f"[OLLAMA] retrying in {_OLLAMA_RETRY_DELAY}s ...")
+                time.sleep(_OLLAMA_RETRY_DELAY)
+
+    raise RuntimeError(
+        f"Target model '{target_model}' failed after {_OLLAMA_MAX_RETRIES} attempt(s). "
+        f"Last error — {type(last_error).__name__}: {last_error}"
+    ) from last_error
 
 
 def _build_initial_gemini_prompt(
@@ -429,35 +470,19 @@ def run_attack_process(session_id: str):
         scorer = ComplianceScorer()
         controller = AttackStrategyController(session_id)
 
-        # ── Controller selects the first technique before any target response ──
-        # Synthesise a zero-knowledge initial state: no prior response, no failure
-        # information, unknown type with zero confidence so no exclusions fire.
-        _init_fa = FailureAnalysis(
-            failure_type=FailureType.UNKNOWN,
-            confidence=0.0,
-            triggered_phrases=[],
-            strategy_pivot="",
-            pivot_rationale="",
-            raw_response_length=0,
-        )
-        _init_cr = ComplianceResult(
-            score=0.0, is_hard_refusal=False, semantic_similarity=0.0,
-            refusal_penalty=0.0, length_signal=0.0, method="heuristic", explanation="",
-        )
-        first_decision = controller.select_next_technique(_init_fa, _init_cr)
-        current_technique = first_decision.selected_technique
+        # ── First technique is always "direct" — establish a baseline ──────────
+        # The controller selects all subsequent techniques from attempt 2 onward.
+        current_technique = "direct"
+        _direct_instruction = TECHNIQUE_INSTRUCTIONS.get("direct", "")
         # ──────────────────────────────────────────────────────────────────────
 
         print(f"[SESSION {session_id}] STEP 3 - intelligence gathering + first attack prompt")
-        print(
-            f"[SESSION {session_id}] Controller selected initial technique: "
-            f"{first_decision.selected_technique} | {first_decision.rationale}"
-        )
+        print(f"[SESSION {session_id}] Initial technique: direct (baseline)")
         current_prompt, tool_calls = gemini_session.send(
             _build_initial_gemini_prompt(
                 success_criteria, target_model,
-                technique_instruction=first_decision.technique_instruction,
-                technique_name=first_decision.selected_technique,
+                technique_instruction=_direct_instruction,
+                technique_name=current_technique,
             )
         )
         for tc in tool_calls:
@@ -551,8 +576,16 @@ def run_attack_process(session_id: str):
         print(f"[SESSION {session_id}] STEP 6 - finished")
 
     except Exception as e:
-        update_session_status(session_id, "failed")
-        print(f"[SESSION {session_id}] FAILED: {e}")
+        # Preserve "finished" if a user-initiated Stop set it before the exception
+        # propagated here. Only genuine errors should become "failed".
+        try:
+            current_status = get_session_status(session_id).status
+        except Exception:
+            current_status = None
+        if current_status != "finished":
+            update_session_status(session_id, "failed")
+        label = "STOPPED" if current_status == "finished" else "FAILED"
+        print(f"[SESSION {session_id}] {label}: {e}")
 
 def get_session_status(session_id: str) -> SessionStatusResponse:
     conn = get_connection()
@@ -871,5 +904,56 @@ def evaluate_target_response(session_id: str, target_response: str) -> EvaluateR
 
     success_criteria = row["success_criteria"]
     judgement = judge_target_response(session_id, target_response, success_criteria)
-    
+
     return EvaluateResponse(judgement=judgement)
+
+
+def get_session_intelligence(session_id: str) -> dict:
+    """Return technique history and aggregated stats for the given session."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT 1 FROM sessions WHERE session_id = ?", (session_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError("Session not found")
+
+    cursor.execute(
+        """SELECT attempt_number, technique, compliance_score, failure_type, timestamp
+           FROM technique_history
+           WHERE session_id = ?
+           ORDER BY attempt_number ASC""",
+        (session_id,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    technique_history = [dict(r) for r in rows]
+
+    tech_scores: dict = {}
+    for row in technique_history:
+        tech_scores.setdefault(row["technique"], []).append(row["compliance_score"])
+
+    technique_stats = {
+        t: {
+            "times_tried": len(scores),
+            "avg_compliance": round(sum(scores) / len(scores), 3),
+            "best_compliance": round(max(scores), 3),
+            "last_compliance": round(scores[-1], 3),
+        }
+        for t, scores in tech_scores.items()
+    }
+
+    best_technique = None
+    best_avg = -1.0
+    for t, stats in technique_stats.items():
+        if stats["times_tried"] >= 2 and stats["avg_compliance"] > best_avg:
+            best_avg = stats["avg_compliance"]
+            best_technique = t
+
+    return {
+        "session_id": session_id,
+        "technique_history": technique_history,
+        "best_technique": best_technique,
+        "technique_stats": technique_stats,
+    }
