@@ -506,7 +506,7 @@ def run_attack_process(session_id: str):
 
             # ── Intelligence enrichment ────────────────────────────────────────
             compliance_result = scorer.score(target_response, success_criteria)
-            failure_analysis = classifier.classify(target_response)
+            failure_analysis = classifier.classify(target_response, compliance_result.score)
             controller.record_attempt(
                 current_technique,
                 compliance_result.score,
