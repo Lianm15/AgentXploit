@@ -357,6 +357,75 @@ else:
     st.divider()
 
     # ==========================
+    # ATTACK INTELLIGENCE
+    # ==========================
+
+    try:
+        intelligence = client.get_intelligence(session_id)
+    except Exception:
+        intelligence = None
+
+    if intelligence and intelligence.get("technique_history"):
+        import plotly.graph_objects as go
+
+        history = intelligence["technique_history"]
+        current_tech = history[-1]["technique"].replace("_", " ").title()
+        best_tech = intelligence.get("best_technique")
+
+        st.markdown("### Attack Intelligence")
+
+        col_table, col_chart = st.columns([1, 1])
+
+        with col_table:
+            table_rows = [
+                {
+                    "Attempt": r["attempt_number"] + 1,
+                    "Technique": r["technique"].replace("_", " ").title(),
+                    "Failure Type": (r["failure_type"] or "—").replace("_", " ").title(),
+                    "Compliance": round(r["compliance_score"], 2),
+                }
+                for r in history
+            ]
+            st.dataframe(table_rows, use_container_width=True, hide_index=True)
+            caption = f"Current technique: **{current_tech}**"
+            if best_tech:
+                caption += f"  |  Best: **{best_tech.replace('_', ' ').title()}**"
+            st.caption(caption)
+
+        with col_chart:
+            attempts = [r["attempt_number"] + 1 for r in history]
+            scores = [r["compliance_score"] for r in history]
+            hover_labels = [r["technique"].replace("_", " ").title() for r in history]
+
+            fig = go.Figure(go.Scatter(
+                x=attempts,
+                y=scores,
+                mode="lines+markers",
+                marker=dict(size=8, color="#6366f1"),
+                line=dict(color="#6366f1", width=2),
+                hovertemplate="Attempt %{x}<br>Score: %{y:.2f}<br>%{text}<extra></extra>",
+                text=hover_labels,
+            ))
+            fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94a3b8", size=12),
+                height=220,
+                margin=dict(l=0, r=0, t=8, b=0),
+                xaxis=dict(
+                    showgrid=True, gridcolor="rgba(255,255,255,0.07)",
+                    zeroline=False, color="#64748b", title="Attempt", dtick=1,
+                ),
+                yaxis=dict(
+                    showgrid=True, gridcolor="rgba(255,255,255,0.07)",
+                    zeroline=False, color="#64748b", title="Score", range=[0, 1],
+                ),
+            )
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+        st.divider()
+
+    # ==========================
     # FINISH BUTTON
     # ==========================
 

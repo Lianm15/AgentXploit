@@ -52,3 +52,15 @@ class ApiClient:
         res = requests.get(f"{self.base_url}/api/stats")
         res.raise_for_status()
         return res.json()
+
+    def get_intelligence(self, session_id: str):
+        res = requests.get(f"{self.base_url}/api/{session_id}/intelligence")
+        if res.status_code == 404:
+            return None
+        res.raise_for_status()
+        return res.json()
+
+    def get_intelligence_summary(self):
+        res = requests.get(f"{self.base_url}/api/intelligence/summary")
+        res.raise_for_status()
+        return res.json()
