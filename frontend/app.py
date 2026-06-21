@@ -110,9 +110,34 @@ if st.session_state.session_id is None:
 
         max_attempts = st.number_input("Maximum attempts", min_value=1, value=50)
 
+        # attack mode selector - standard or drift
+        selected_mode = st.selectbox(
+            "Attack mode",
+            ["Standard", "Drift"],
+            key="attack_mode",
+            help="Standard: single-prompt attacks. Drift: slowly pushes the AI to agree step by step.",
+        )
+
+        # show description based on selected mode
+        if selected_mode == "Drift":
+            st.markdown(
+                '<p style="color:#94a3b8; font-size:0.8rem; margin-top:-0.5rem;">'
+                "Engages the AI in a multi-turn conversation, gradually steering it toward the goal. "
+                "Each message pushes a little further. If the AI refuses, the refusal is erased "
+                "and a softer message takes its place - so the AI never knows it resisted.</p>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<p style="color:#94a3b8; font-size:0.8rem; margin-top:-0.5rem;">'
+                "Generates a new attack prompt each round using different jailbreak techniques. "
+                "Each attempt is independent - the AI has no memory of previous tries.</p>",
+                unsafe_allow_html=True,
+            )
+
         st.markdown('<div class="launch-wrapper">', unsafe_allow_html=True)
         start_clicked = st.button("Launch Test", key="launch_test")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
         '<p class="disclaimer">For authorized security research and model evaluation only.</p>',
@@ -130,6 +155,7 @@ if st.session_state.session_id is None:
                 selected_model,
                 success_criteria,
                 max_attempts,
+                mode=selected_mode.lower(),
             )
 
             client.start_attack(session_id)
@@ -219,28 +245,25 @@ else:
 
         if is_active:
 
-                b1, b2, b3 = st.columns(3)
+            b1, b2, b3 = st.columns(3)
 
-                with b1:
-                    if st.button("Pause", use_container_width=True):
-                        client.session_control(session_id, "pause")
-                        st.rerun()
+            with b1:
+                if st.button("Pause", use_container_width=True):
+                    client.session_control(session_id, "pause")
+                    st.rerun()
 
-                with b2:
-                    if st.button("Resume", use_container_width=True):
-                        client.session_control(session_id, "resume")
-                        st.rerun()
+            with b2:
+                if st.button("Resume", use_container_width=True):
+                    client.session_control(session_id, "resume")
+                    st.rerun()
 
-                with b3:
-                    if st.button("Stop", use_container_width=True):
-                        client.session_control(session_id, "stop")
-                        st.rerun()
+            with b3:
+                if st.button("Stop", use_container_width=True):
+                    client.session_control(session_id, "stop")
+                    st.rerun()
 
         else:
-            st.markdown(
-                '<div style="height:38px;"></div>',
-                unsafe_allow_html=True
-            )
+            st.markdown('<div style="height:38px;"></div>', unsafe_allow_html=True)
     st.divider()
 
     # ==========================
@@ -284,17 +307,22 @@ else:
                 avatar_text = "AI"
 
             elif sender in (
-                "tool", "model_profile", "web_search",
-                "garak", "pyrit_converter", "pyrit_crescendo", "jailbreakbench"
+                "tool",
+                "model_profile",
+                "web_search",
+                "garak",
+                "pyrit_converter",
+                "pyrit_crescendo",
+                "jailbreakbench",
             ):
                 _TOOL_DISPLAY = {
-                    "model_profile":    ("Model Profile",   "MP"),
-                    "web_search":       ("Web Search",      "WS"),
-                    "garak":            ("Garak",           "GK"),
-                    "pyrit_converter":  ("PyRIT Converter", "PC"),
-                    "pyrit_crescendo":  ("PyRIT Crescendo", "PR"),
-                    "jailbreakbench":   ("JailbreakBench",  "JB"),
-                    "tool":             ("Tool",            "T"),
+                    "model_profile": ("Model Profile", "MP"),
+                    "web_search": ("Web Search", "WS"),
+                    "garak": ("Garak", "GK"),
+                    "pyrit_converter": ("PyRIT Converter", "PC"),
+                    "pyrit_crescendo": ("PyRIT Crescendo", "PR"),
+                    "jailbreakbench": ("JailbreakBench", "JB"),
+                    "tool": ("Tool", "T"),
                 }
                 avatar_class = "avatar avatar-tool"
                 card_class = "msg-card msg-card-tool"
