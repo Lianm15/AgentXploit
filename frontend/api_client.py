@@ -10,13 +10,14 @@ class ApiClient:
         res.raise_for_status()
         return res.json()["models"]
 
-    def initialize(self, target_model, success_criteria, max_attempts):
+    def initialize(self, target_model, success_criteria, max_attempts,mode="standard"):
         res = requests.post(
             f"{self.base_url}/api/initialize",
             json={
                 "target_model": target_model,
                 "success_criteria": success_criteria,
                 "max_attempts": max_attempts,
+                "mode": mode
             },
         )
         res.raise_for_status()

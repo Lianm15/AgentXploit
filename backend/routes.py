@@ -20,11 +20,12 @@ class InitializeRequest(BaseModel):
     target_model: str
     success_criteria: str
     max_attempts: int
+    mode: str = "standard"
 
 @router.post("/initialize", response_model=InitializeResponse)
 async def initialize(request: InitializeRequest) -> InitializeResponse:
     try:
-        return initialize_session(request.target_model, request.success_criteria, request.max_attempts)
+        return initialize_session(request.target_model, request.success_criteria, request.max_attempts, request.mode)
     except Exception as e:
         logger.error(f"Initialization failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error during initialization")
