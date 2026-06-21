@@ -258,8 +258,7 @@ def run_drift_process(session_id: str):
                 # Log the backtrack event so it will be visible in the UI
                 add_message(
                     session_id, "judge",
-                    f"⟲ BACKTRACK ({refusal_streak}/{MAX_REFUSAL_STREAK}) "
-                    f"— Target refused. Removing refused exchange and generating softer alternative."
+                    f"⟲ Target refused — backtracking with a softer approach"
                 )
 
                 if refusal_streak >= MAX_REFUSAL_STREAK:
@@ -267,7 +266,7 @@ def run_drift_process(session_id: str):
                     # Reset backtrack counter and let Gemini try a completely different angle.
                     add_message(
                         session_id, "judge",
-                        "⟲ Max backtracks reached - Gemini will try a different approach."
+                        "⟲ Max refusal streak reached - Gemini will try a different approach."
                     )
                     refusal_streak = 0
 

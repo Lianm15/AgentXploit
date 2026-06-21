@@ -3,10 +3,12 @@ import os
 
 _DB_PATH = os.getenv("DB_PATH", "agentxploit.db")
 
+
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def create_tables() -> None:
     conn = get_connection()
@@ -20,8 +22,8 @@ def create_tables() -> None:
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (session_id) REFERENCES sessions(session_id)
         )
-    """)    
-    
+    """)
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS results (
             session_id VARCHAR(50) PRIMARY KEY,
@@ -40,7 +42,7 @@ def create_tables() -> None:
         success_criteria VARCHAR(200) NOT NULL,
         max_attempts INTEGER NOT NULL,
         status VARCHAR(50) NOT NULL DEFAULT 'initialized',
-        started_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         mode VARCHAR(20) NOT NULL DEFAULT 'standard'
     )
     """)
