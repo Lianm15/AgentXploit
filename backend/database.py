@@ -41,6 +41,7 @@ def create_tables() -> None:
         max_attempts INTEGER NOT NULL,
         status VARCHAR(50) NOT NULL DEFAULT 'initialized',
         started_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        mode VARCHAR(20) NOT NULL DEFAULT 'standard'
     )
     """)
     conn.commit()

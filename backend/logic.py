@@ -84,15 +84,16 @@ class StatsResponse(BaseModel):
     status_distribution: List[StatusCount]
     recent_history: List[dict]
 
-def initialize(target_model: str, success_criteria: str, max_attempts: int) -> InitializeResponse:
+def initialize(target_model: str, success_criteria: str, max_attempts: int, mode: str = "standard") -> InitializeResponse:
     session_id = str(uuid.uuid4())  
+     # mode can be 'standard' or 'drift'
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    # saves the session to the database
+    # saves the session to the database with mode 'standard' or 'drift'
     cursor.execute("""
-        INSERT INTO sessions (session_id, target_model, success_criteria, max_attempts)
+        INSERT INTO sessions (session_id, target_model, success_criteria, max_attempts, mode)
         VALUES (?, ?, ?, ?)
     """, (
         session_id,
