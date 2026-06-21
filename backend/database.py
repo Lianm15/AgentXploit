@@ -46,8 +46,8 @@ def create_tables() -> None:
             success_criteria VARCHAR(200) NOT NULL,
             max_attempts     INTEGER NOT NULL,
             status           VARCHAR(50) NOT NULL DEFAULT 'initialized',
-            started_at       DATETIME DEFAULT CURRENT_TIMESTAMP
-            mode VARCHAR(20) NOT NULL DEFAULT 'standard',
+            started_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+            mode VARCHAR(20) NOT NULL DEFAULT 'standard'
         )
     """)
 
@@ -70,8 +70,8 @@ def create_tables() -> None:
     # Each ALTER TABLE is a no-op if the column already exists (caught and ignored).
     for col, typedef in [
         ("compliance_score", "REAL DEFAULT NULL"),
-        ("failure_type",     "TEXT DEFAULT NULL"),
-        ("technique",        "TEXT DEFAULT NULL"),
+        ("failure_type", "TEXT DEFAULT NULL"),
+        ("technique", "TEXT DEFAULT NULL"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE messages ADD COLUMN {col} {typedef}")
