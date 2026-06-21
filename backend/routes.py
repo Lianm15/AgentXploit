@@ -10,6 +10,7 @@ from logic import SessionStatusResponse, get_session_status
 from logic import ActionRequest, ActionResponse, handle_session_control
 from logic import FinishTestResponse, get_tests_summary, EvaluateRequest, EvaluateResponse, evaluate_target_response
 from logic import get_stats, StatsResponse
+from logic import get_session_intelligence, get_intelligence_summary
 import logging
 
 router = APIRouter(prefix="/api") 
@@ -45,6 +46,17 @@ async def history():
     except Exception as e:
         logger.error(f"Error retrieving history: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error while retrieving history")
+
+
+# Must be registered before any /{session_id}/... routes so that FastAPI's
+# first-match routing does not capture "intelligence" as a session_id.
+@router.get("/intelligence/summary")
+async def get_intelligence_summary_endpoint():
+    try:
+        return get_intelligence_summary()
+    except Exception as e:
+        logger.error(f"Error retrieving intelligence summary: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve intelligence summary")
 
 
 @router.get("/{session_id}/messages", response_model=Transcript)
@@ -85,7 +97,7 @@ async def start_attack(session_id: str, background_tasks: BackgroundTasks):
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT 1 FROM sessions WHERE session_id = ?",
+            "SELECT status FROM sessions WHERE session_id = ?",
             (session_id,)
         )
         row = cursor.fetchone()
@@ -94,10 +106,18 @@ async def start_attack(session_id: str, background_tasks: BackgroundTasks):
         if not row:
             raise HTTPException(status_code=404, detail="Session not found")
 
+        if row["status"] != "initialized":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Session already started (status: {row['status']})",
+            )
+
         background_tasks.add_task(run_attack_process, session_id)
 
         return {"status": "Attack started in background"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error starting attack: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to start attack")
@@ -146,3 +166,14 @@ async def evaluate(session_id: str, request: EvaluateRequest) -> EvaluateRespons
     except Exception as e:
         logger.error(f"Error evaluating response for {session_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to evaluate response")
+
+
+@router.get("/{session_id}/intelligence")
+async def get_intelligence(session_id: str):
+    try:
+        return get_session_intelligence(session_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error retrieving intelligence for {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve intelligence data")

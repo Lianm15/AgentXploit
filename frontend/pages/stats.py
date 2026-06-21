@@ -171,7 +171,7 @@ if data["total_sessions"] == 0:
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab_overview, tab_models, tab_sessions = st.tabs(["Overview", "Models", "Sessions"])
+tab_overview, tab_models, tab_sessions, tab_intel = st.tabs(["Overview", "Models", "Sessions", "Intelligence"])
 
 # ── Overview ──────────────────────────────────────────────────────────────────
 
@@ -304,7 +304,7 @@ with tab_sessions:
                 "Session":      row["session_id"][:8],
                 "Model":        row["target_model"],
                 "Duration (s)": round(row["time_elapsed"], 1),
-                "Attempts":     row["messages_count"] // 3,
+                "Attempts":     row.get("target_count", row["messages_count"] // 3),
                 "Result":       "✓" if row["success"] in (1, True) else "✗",
             }
             for row in data["recent_history"]
@@ -317,3 +317,83 @@ with tab_sessions:
             use_container_width=True,
             hide_index=True,
         )
+
+# ── Intelligence ───────────────────────────────────────────────────────────────
+
+with tab_intel:
+
+    try:
+        intel = client.get_intelligence_summary()
+    except Exception:
+        st.error("Could not load intelligence data from backend.")
+        intel = None
+
+    if intel is None:
+        st.info("No intelligence data available yet.")
+    else:
+        effectiveness = intel.get("technique_effectiveness", {})
+        failure_dist  = intel.get("failure_distribution", {})
+
+        # ── Failure type distribution ──────────────────────────────────────────
+        if failure_dist:
+            st.markdown('<p class="section-label">Failure Type Distribution (all sessions)</p>',
+                        unsafe_allow_html=True)
+            st.plotly_chart(
+                hbar_chart(
+                    list(failure_dist.keys()),
+                    list(failure_dist.values()),
+                    "#6366f1",
+                ),
+                use_container_width=True,
+                config=_NO_BAR,
+            )
+        else:
+            st.info("No failure type data yet. Run at least one attack session.")
+
+        # ── Technique effectiveness per model ──────────────────────────────────
+        if effectiveness:
+            st.write("")
+            st.markdown('<p class="section-label">Technique Effectiveness per Model</p>',
+                        unsafe_allow_html=True)
+            st.markdown(
+                '<p style="font-size:0.8rem;color:#64748b;margin-bottom:0.5rem;">'
+                "These priors are loaded at the start of each new session against the same model "
+                "to seed the UCB1 bandit's exploration order — techniques with higher historical "
+                "compliance are tried first."
+                "</p>",
+                unsafe_allow_html=True,
+            )
+
+            for model, tech_data in sorted(effectiveness.items()):
+                with st.expander(f"Model: {model}", expanded=True):
+                    rows = [
+                        {
+                            "Technique":       tech,
+                            "Avg Compliance":  round(stats["avg_compliance"], 3),
+                            "Total Tries":     stats["total_tries"],
+                            "Sessions Used":   stats["sessions_used"],
+                        }
+                        for tech, stats in sorted(
+                            tech_data.items(),
+                            key=lambda kv: kv[1]["avg_compliance"],
+                            reverse=True,
+                        )
+                    ]
+                    best = rows[0]["Technique"] if rows else "—"
+                    st.caption(f"Best technique so far: **{best}** "
+                               f"(avg compliance {rows[0]['Avg Compliance']:.3f})" if rows else "")
+                    st.dataframe(
+                        rows,
+                        column_config={
+                            "Avg Compliance": st.column_config.ProgressColumn(
+                                "Avg Compliance",
+                                min_value=0.0,
+                                max_value=1.0,
+                                format="%.3f",
+                            ),
+                        },
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+        else:
+            st.info("No technique effectiveness data yet. Run at least one attack session.")
