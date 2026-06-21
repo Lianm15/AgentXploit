@@ -1,4 +1,5 @@
 sentence-transformers>=2.7.0
+numpy
 fastapi
 uvicorn
 pydantic
