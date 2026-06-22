@@ -79,6 +79,12 @@ def create_tables() -> None:
         except Exception:
             pass
 
+    try:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN mode VARCHAR(20) NOT NULL DEFAULT 'standard'")
+        conn.commit()
+    except Exception:
+        pass
+
     conn.close()
 
 
