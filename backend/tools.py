@@ -427,6 +427,45 @@ def fetch_jailbreak_prompts(behavior_description: str, max_results: int = 5) -> 
 
     return "\n".join(lines)
 
+def tokenade_encode(text: str, keywords: str = "") -> str:
+    """
+    Pliny-style tokenade: injects zero-width Unicode characters between
+    letters of sensitive keywords to bypass input keyword filters.
+    """
+    ZERO_WIDTH = ["\u200b", "\u200c", "\u200d", "\ufeff", "\u2060"]
+
+    import random
+    import re
+
+    def inject(word):
+        result = []
+        for i, c in enumerate(word):
+            result.append(c)
+            if i < len(word) - 1:
+                result.append(random.choice(ZERO_WIDTH))
+        return "".join(result)
+
+    if keywords.strip():
+        encoded = text
+        for kw in [k.strip() for k in keywords.split(",") if k.strip()]:
+            pattern = re.compile(re.escape(kw), re.IGNORECASE)
+            for match in pattern.finditer(encoded):
+                encoded = encoded[:match.start()] + inject(match.group()) + encoded[match.end():]
+                break
+        result_text = encoded
+    else:
+        result_text = " ".join(inject(w) if len(w) > 4 else w for w in text.split())
+
+    injected = len(result_text) - len(text)
+    return (
+        f"Tokenade encoding applied\n\n"
+        f"Original ({len(text)} chars):\n{text[:300]}\n\n"
+        f"Encoded ({len(result_text)} chars, {injected} zero-width chars injected):\n"
+        f"{result_text[:1500]}\n\n"
+        f"Note: Encoded text looks identical but contains invisible Unicode "
+        f"characters that break keyword pattern matching."
+    )
+
 
 TOOL_REGISTRY = {
     "get_model_profile":     get_model_profile,
@@ -435,6 +474,7 @@ TOOL_REGISTRY = {
     "apply_pyrit_converter": apply_pyrit_converter,
     "run_pyrit_crescendo":   run_pyrit_crescendo,
     "fetch_jailbreak_prompts": fetch_jailbreak_prompts,
+    "tokenade_encode":       tokenade_encode
 }
 
 
