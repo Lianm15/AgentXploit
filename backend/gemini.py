@@ -253,6 +253,32 @@ JAILBREAK_TOOLS = types.Tool(
                 required=["query"],
             ),
         ),
+        types.FunctionDeclaration(
+            name="tokenade_encode",
+            description=(
+                "Pliny-style steganographic encoding - injects invisible zero-width Unicode characters "
+                "into sensitive keywords to bypass input keyword filters. The model's tokenizer still "
+                "reads the words, but pattern-matching safety filters cannot detect them."
+            ),
+            parameters=types.Schema(
+                type="OBJECT",
+                properties={
+                    "text": types.Schema(
+                        type="STRING",
+                        description="The full prompt text to encode."
+                    ),
+                    "keywords": types.Schema(
+                        type="STRING",
+                        description=(
+                            "Comma-separated sensitive keywords to encode. "
+                            "If empty, all words longer than 4 characters are encoded. "
+                            "Example: 'password,hack,exploit'"
+                        )
+                    ),
+                },
+                required=["text"],
+            ),
+        ),
     ]
 )
 
