@@ -322,6 +322,7 @@ else:
         "pyrit_crescendo": ("PyRIT Crescendo", "PR"),
         "jailbreakbench":  ("JailbreakBench",  "JB"),
         "tool":            ("Tool",            "T"),
+        "tokenade":        ("Tokenade",        "TK"),
     }
 
     _STATUS_COLORS = {

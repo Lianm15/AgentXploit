@@ -387,6 +387,7 @@ _TOOL_SENDERS = {
     "apply_pyrit_converter": ("pyrit_converter", "PyRIT Converter", "PC"),
     "run_pyrit_crescendo": ("pyrit_crescendo", "PyRIT Crescendo", "PR"),
     "fetch_jailbreak_prompts": ("jailbreakbench", "JailbreakBench", "JB"),
+    "tokenade_encode": ("tokenade", "Tokenade", "TK")
 }
 
 
@@ -479,7 +480,15 @@ def _tool_summary(name: str, args: dict, result: str) -> str:
         return f"Web search: '{query}'\n" + (
             f"Top result: {first_title}" if first_title else "No relevant results found"
         )
-
+        
+    if name == "tokenade_encode":
+        keywords = args.get("keywords", "")
+        in_len = len(args.get("text", ""))
+        return (
+            f"Tokenade steganographic encoding applied\n"
+            f"Input: {in_len} chars | Keywords: {keywords or 'all words >4 chars'}\n"
+            f"→ Zero-width Unicode characters injected to bypass keyword filters"
+        )
     return f"{name}: completed"
 
 
