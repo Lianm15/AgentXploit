@@ -76,3 +76,11 @@ class ApiClient:
             return None
         res.raise_for_status()
         return res.json()
+
+    def get_scorer_status(self) -> dict:
+        try:
+            res = requests.get(f"{self.base_url}/api/scorer/status", timeout=2)
+            res.raise_for_status()
+            return res.json()
+        except Exception:
+            return {"scorer": "unknown", "model": None}

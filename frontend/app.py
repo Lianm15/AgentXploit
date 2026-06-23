@@ -62,6 +62,74 @@ _FAILURE_TYPE_INFO: dict = {
     "unknown":            "Unknown — No strong failure signal detected. Pivot: switch technique entirely.",
 }
 
+def _scorer_badge_html(status: dict, compact: bool = False) -> str:
+    """
+    compact=False: full badge with label + subtitle (home page, intelligence panel, stats)
+    compact=True:  one-line summary for session summary footer
+    """
+    scorer = status.get("scorer", "unknown")
+    model  = status.get("model")
+
+    if scorer == "embedding":
+        if compact:
+            return (
+                f'<div style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;">'
+                f'<span style="width:6px;height:6px;border-radius:50%;background:#22c55e;'
+                f'flex-shrink:0;display:inline-block;"></span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+                f'font-weight:600;letter-spacing:0.10em;text-transform:uppercase;color:#22c55e;">'
+                f'EVALUATION MODE: EMBEDDING</span></div>'
+            )
+        model_str = f'<span style="font-family:\'Hanken Grotesk\',sans-serif;font-size:11px;color:#4ade80;margin-left:6px;">{model}</span>' if model else ""
+        return (
+            f'<div style="display:inline-flex;align-items:center;gap:7px;'
+            f'background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.22);'
+            f'border-radius:6px;padding:5px 12px;margin-bottom:10px;">'
+            f'<span style="width:6px;height:6px;border-radius:50%;background:#22c55e;'
+            f'flex-shrink:0;"></span>'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:600;'
+            f'letter-spacing:0.10em;text-transform:uppercase;color:#22c55e;">EVALUATION: EMBEDDING</span>'
+            f'{model_str}</div>'
+        )
+    elif scorer == "heuristic":
+        if compact:
+            return (
+                f'<div style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;">'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;'
+                f'font-weight:700;color:#f59e0b;">!</span>'
+                f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+                f'font-weight:600;letter-spacing:0.10em;text-transform:uppercase;color:#f59e0b;">'
+                f'EVALUATION MODE: HEURISTIC FALLBACK</span>'
+                f'<span style="font-family:\'Hanken Grotesk\',sans-serif;font-size:12px;'
+                f'color:#94a3b8;margin-left:4px;">· Scores may be less accurate</span></div>'
+            )
+        return (
+            f'<div style="display:flex;align-items:flex-start;gap:10px;'
+            f'background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.30);'
+            f'border-radius:6px;padding:10px 14px;margin-bottom:10px;">'
+            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:13px;'
+            f'font-weight:700;color:#f59e0b;flex-shrink:0;margin-top:1px;">!</span>'
+            f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+            f'font-weight:600;letter-spacing:0.10em;text-transform:uppercase;color:#f59e0b;">'
+            f'EVALUATION: HEURISTIC FALLBACK</span>'
+            f'<span style="font-family:\'Hanken Grotesk\',sans-serif;font-size:12px;'
+            f'color:#94a3b8;display:block;margin-top:3px;">'
+            f'Advanced evaluation is currently unavailable. Results may be less accurate.</span>'
+            f'</div></div>'
+        )
+    # unknown — backend unreachable
+    return (
+        f'<div style="display:inline-flex;align-items:center;gap:7px;'
+        f'background:rgba(100,116,139,0.07);border:1px solid rgba(100,116,139,0.20);'
+        f'border-radius:6px;padding:5px 12px;margin-bottom:10px;">'
+        f'<span style="width:6px;height:6px;border-radius:50%;background:#64748b;'
+        f'flex-shrink:0;"></span>'
+        f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:600;'
+        f'letter-spacing:0.10em;text-transform:uppercase;color:#64748b;">EVALUATION: UNKNOWN</span>'
+        f'</div>'
+    )
+
+
 def _score_color(score: float) -> str:
     if score <= 0.10: return "#ef4444"   # red
     if score <= 0.30: return "#f97316"   # orange
@@ -237,6 +305,12 @@ if st.session_state.session_id is None:
             unsafe_allow_html=True,
         )
 
+        try:
+            _scorer_status = client.get_scorer_status()
+        except Exception:
+            _scorer_status = {"scorer": "unknown", "model": None}
+        st.markdown(_scorer_badge_html(_scorer_status), unsafe_allow_html=True)
+
         selected_model = st.selectbox("Target model", models, key="target_model_select")
 
         # Prior knowledge badge — fetched on every model change (Streamlit re-runs on selectbox change)
@@ -253,17 +327,17 @@ if st.session_state.session_id is None:
             sessions_label = f"{session_count} session{'s' if session_count != 1 else ''}"
             st.markdown(
                 f"""<div style="
-                    background:rgba(255,176,32,0.06);
-                    border:1px solid rgba(255,176,32,0.25);
+                    background:rgba(99,102,241,0.07);
+                    border:1px solid rgba(99,102,241,0.25);
                     border-radius:8px;padding:10px 14px;margin:6px 0 10px 0;">
                     <span style="display:inline-flex;align-items:center;gap:7px;
                     font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
-                    letter-spacing:0.12em;text-transform:uppercase;color:#ffb020;">
+                    letter-spacing:0.12em;text-transform:uppercase;color:#a5b4fc;">
                     <span style="display:inline-block;width:7px;height:7px;border-radius:50%;
-                    background:#ffb020;flex-shrink:0;"></span>PRIOR KNOWLEDGE</span><br>
+                    background:#6366f1;flex-shrink:0;"></span>PRIOR KNOWLEDGE</span><br>
                     <span style="color:#94a3b8;font-size:12px;margin-top:4px;display:block;">
                     {len(priors)} technique(s) profiled across {sessions_label}&nbsp;·&nbsp;
-                    Best: <b style="color:#fcd34d">{best_tech.replace('_',' ')}</b>
+                    Best: <b style="color:#c7d2fe">{best_tech.replace('_',' ')}</b>
                     (avg&nbsp;{best_score:.2f})&nbsp;·&nbsp;
                     UCB1 will exploit these priors from attempt&nbsp;1
                     </span></div>""",
@@ -580,6 +654,12 @@ else:
 
             st.markdown("### Attack Intelligence")
 
+            try:
+                _scorer_status_intel = client.get_scorer_status()
+            except Exception:
+                _scorer_status_intel = {"scorer": "unknown", "model": None}
+            st.markdown(_scorer_badge_html(_scorer_status_intel), unsafe_allow_html=True)
+
             # Prior knowledge banner
             target_model = st.session_state.get("target_model")
             if target_model:
@@ -798,6 +878,12 @@ else:
                         f'<div style="font-size:22px;font-weight:700;color:#e2e8f0;">{pivots}</div>',
                         unsafe_allow_html=True,
                     )
+
+                try:
+                    _scorer_status_summ = client.get_scorer_status()
+                except Exception:
+                    _scorer_status_summ = {"scorer": "unknown", "model": None}
+                st.markdown(_scorer_badge_html(_scorer_status_summ, compact=True), unsafe_allow_html=True)
 
             st.write("")
             left, center, right = st.columns([3, 2, 3])
