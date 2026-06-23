@@ -156,9 +156,9 @@ def _intel_table_html(history: list) -> str:
   <thead>
     <tr>
       <th>#</th>
-      <th>Technique ⓘ</th>
-      <th>Failure Type ⓘ</th>
-      <th>Score ⓘ</th>
+      <th>Technique <span class="ix-tip" data-tip="Attack strategy selected by the Strategy Controller. Examples include Indirect Extraction, Encoding Base64, Virtualization, and Authority Framing.">ⓘ</span></th>
+      <th>Failure Type <span class="ix-tip" data-tip="Classification of why the previous attack attempt failed. Examples include Hard Refusal, Soft Refusal, Persona Detected, and Encoding Rejected.">ⓘ</span></th>
+      <th>Score <span class="ix-tip" data-tip="Compliance score between 0 and 1. Higher values indicate responses closer to the success criteria. 0 = no progress, 1 = full compliance.">ⓘ</span></th>
     </tr>
   </thead>
   <tbody>{rows_html}
@@ -193,6 +193,9 @@ if "start_time" not in st.session_state:
 
 if "end_time" not in st.session_state:
     st.session_state.end_time = None
+
+if "target_model" not in st.session_state:
+    st.session_state.target_model = None
 
 
 # load correct css
@@ -234,7 +237,44 @@ if st.session_state.session_id is None:
             unsafe_allow_html=True,
         )
 
-        selected_model = st.selectbox("Target model", models, key="target_model")
+        selected_model = st.selectbox("Target model", models, key="target_model_select")
+
+        # Prior knowledge badge — fetched on every model change (Streamlit re-runs on selectbox change)
+        try:
+            priors_data   = client.get_priors(selected_model)
+            priors        = priors_data.get("priors", {})
+            session_count = priors_data.get("session_count", 0)
+        except Exception:
+            priors, session_count = {}, 0
+
+        if priors:
+            best_tech  = max(priors, key=priors.get)
+            best_score = priors[best_tech]
+            sessions_label = f"{session_count} session{'s' if session_count != 1 else ''}"
+            st.markdown(
+                f"""<div style="
+                    background:rgba(255,176,32,0.06);
+                    border:1px solid rgba(255,176,32,0.25);
+                    border-radius:8px;padding:10px 14px;margin:6px 0 10px 0;">
+                    <span style="display:inline-flex;align-items:center;gap:7px;
+                    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+                    letter-spacing:0.12em;text-transform:uppercase;color:#ffb020;">
+                    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;
+                    background:#ffb020;flex-shrink:0;"></span>PRIOR KNOWLEDGE</span><br>
+                    <span style="color:#94a3b8;font-size:12px;margin-top:4px;display:block;">
+                    {len(priors)} technique(s) profiled across {sessions_label}&nbsp;·&nbsp;
+                    Best: <b style="color:#fcd34d">{best_tech.replace('_',' ')}</b>
+                    (avg&nbsp;{best_score:.2f})&nbsp;·&nbsp;
+                    UCB1 will exploit these priors from attempt&nbsp;1
+                    </span></div>""",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<p style="color:#64748b;font-size:11px;margin:2px 0 8px 0;">'
+                "&#9711;&nbsp; No prior sessions for this model — starting cold.</p>",
+                unsafe_allow_html=True,
+            )
 
         success_criteria = st.text_area(
             "Success criteria",
@@ -298,6 +338,7 @@ if st.session_state.session_id is None:
             client.start_attack(session_id)
 
             st.session_state.session_id = session_id
+            st.session_state.target_model = selected_model
             st.session_state.start_time = time.time()
             st.session_state.end_time = None
 
@@ -435,16 +476,80 @@ else:
                     name, avatar_text = "Judge", "J"
 
                 content = normalize_message_content(raw_content)
+
+                # ── per-message intelligence overlays ─────────────────────────
+                technique    = msg.get("technique")
+                rationale    = msg.get("rationale")
+                comp_score   = msg.get("compliance_score")
+                score_expl   = msg.get("score_explanation")
+
+                # Technique badge (attacker messages)
+                tech_badge = ""
+                if sender == "attacker" and technique:
+                    tech_label = technique.replace("_", " ").upper()
+                    tech_badge = (
+                        f'<span style="display:inline-block;background:rgba(99,102,241,0.15);'
+                        f'color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);'
+                        f'border-radius:4px;font-size:10px;font-weight:600;'
+                        f'padding:2px 7px;margin-bottom:6px;letter-spacing:0.05em;">'
+                        f'{html.escape(tech_label)}</span><br>'
+                    )
+
+                # Score badge (target messages)
+                score_badge = ""
+                if sender == "target" and comp_score is not None:
+                    s_color = _score_color(comp_score)
+                    score_badge = (
+                        f'<span style="float:right;background:rgba(0,0,0,0.25);'
+                        f'color:{s_color};border:1px solid {s_color}44;'
+                        f'border-radius:4px;font-size:11px;font-weight:700;'
+                        f'padding:2px 8px;margin-left:8px;">'
+                        f'{comp_score:.2f}</span>'
+                    )
+
+                # Rationale line (attacker, attempt 2+) — collapsible
+                rationale_html = ""
+                if sender == "attacker" and rationale:
+                    rationale_html = (
+                        f'<details style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.07);'
+                        f'padding-top:7px;">'
+                        f'<summary style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+                        f'font-weight:600;letter-spacing:0.12em;text-transform:uppercase;'
+                        f'color:#6366f1;cursor:pointer;list-style:none;user-select:none;">'
+                        f'&#9654; WHY THIS TECHNIQUE</summary>'
+                        f'<div style="margin-top:6px;font-family:\'Hanken Grotesk\',sans-serif;'
+                        f'font-size:13px;color:#94a3b8;line-height:1.5;padding-left:2px;">'
+                        f'{html.escape(rationale)}</div></details>'
+                    )
+
+                # Score explanation panel (target messages)
+                explanation_html = ""
+                if sender == "target" and score_expl:
+                    explanation_html = (
+                        f'<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.07);'
+                        f'padding-top:7px;">'
+                        f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
+                        f'font-weight:600;letter-spacing:0.12em;text-transform:uppercase;'
+                        f'color:#64748b;margin-bottom:3px;">SCORE ANALYSIS</div>'
+                        f'<div style="font-family:\'Hanken Grotesk\',sans-serif;font-size:13px;'
+                        f'color:#94a3b8;line-height:1.5;">{html.escape(score_expl)}</div></div>'
+                    )
+                # ──────────────────────────────────────────────────────────────
+
                 st.markdown(
                     f'<div class="{card_class}"><div class="msg-header">'
                     f'<div class="{avatar_class}">{avatar_text}</div>'
                     f'<div class="msg-meta"><span class="msg-name">{name}</span>'
-                    f'<span class="msg-time">{timestamp}</span></div></div>'
-                    f'<div class="msg-body">',
+                    f'<span class="msg-time">{timestamp}</span></div>'
+                    f'{score_badge}</div>'
+                    f'<div class="msg-body">{tech_badge}',
                     unsafe_allow_html=True,
                 )
                 st.markdown(content, unsafe_allow_html=True)
-                st.markdown("</div></div>", unsafe_allow_html=True)
+                st.markdown(
+                    f'{rationale_html}{explanation_html}</div></div>',
+                    unsafe_allow_html=True,
+                )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -474,6 +579,38 @@ else:
             best_tech    = intelligence.get("best_technique")
 
             st.markdown("### Attack Intelligence")
+
+            # Prior knowledge banner
+            target_model = st.session_state.get("target_model")
+            if target_model:
+                try:
+                    priors_data   = client.get_priors(target_model)
+                    priors        = priors_data.get("priors", {})
+                    session_count = priors_data.get("session_count", 0)
+                except Exception:
+                    priors, session_count = {}, 0
+                if priors:
+                    top_priors = sorted(priors.items(), key=lambda x: x[1], reverse=True)[:3]
+                    priors_text = "&nbsp;&nbsp;|&nbsp;&nbsp;".join(
+                        f"<b style='color:#c7d2fe'>{t.replace('_',' ')}</b>&nbsp;{s:.2f}"
+                        for t, s in top_priors
+                    )
+                    sessions_label = f"{session_count} session{'s' if session_count != 1 else ''}"
+                    st.markdown(
+                        f"""<div style="
+                            background:rgba(99,102,241,0.08);
+                            border:1px solid rgba(99,102,241,0.2);
+                            border-radius:8px;padding:8px 14px;margin-bottom:12px;">
+                            <span style="display:inline-flex;align-items:center;gap:7px;
+                            font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+                            letter-spacing:0.12em;text-transform:uppercase;color:#a5b4fc;">
+                            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;
+                            background:#6366f1;flex-shrink:0;"></span>
+                            PRIORS ACTIVE — {len(priors)} techniques · {sessions_label}</span>
+                            &nbsp;<span style="color:#64748b;font-size:11px;">
+                            {priors_text}</span></div>""",
+                        unsafe_allow_html=True,
+                    )
 
             col_table, col_chart = st.columns([1, 1])
 
@@ -511,12 +648,166 @@ else:
             st.divider()
 
         if is_finished:
+            # ── Session Summary Card ───────────────────────────────────────────
+            try:
+                summary_data = client.get_summary(sid)
+            except Exception:
+                summary_data = None
+
+            history = (intelligence or {}).get("technique_history", [])
+
+            # Outcome styling
+            if status == "success_found":
+                outcome_label    = "ATTACK SUCCESSFUL"
+                outcome_subtitle = "Success criteria achieved."
+                outcome_color    = "#22c55e"
+                card_bg          = "rgba(34,197,94,0.07)"
+                card_border      = "rgba(34,197,94,0.28)"
+            elif status == "failed":
+                outcome_label    = "ATTACK UNSUCCESSFUL"
+                outcome_subtitle = "Session ended due to an error."
+                outcome_color    = "#ef4444"
+                card_bg          = "rgba(239,68,68,0.07)"
+                card_border      = "rgba(239,68,68,0.22)"
+            else:
+                outcome_label    = "NO SUCCESS FOUND"
+                outcome_subtitle = "Success criteria not reached before max attempts."
+                outcome_color    = "#f59e0b"
+                card_bg          = "rgba(245,158,11,0.07)"
+                card_border      = "rgba(245,158,11,0.25)"
+
+            elapsed_s  = int((st.session_state.end_time or time.time()) - st.session_state.start_time)
+            attempts_n = len(history)
+            best_tech_name = (
+                (intelligence.get("best_technique") or "—").replace("_", " ").title()
+                if intelligence else "—"
+            )
+
+            # Compute learning metrics
+            first_score  = history[0]["compliance_score"] if history else None
+            peak_score   = max(r["compliance_score"] for r in history) if history else None
+            peak_attempt = (
+                max(range(len(history)), key=lambda i: history[i]["compliance_score"]) + 1
+                if history else None
+            )
+            techniques_tried = len((intelligence or {}).get("technique_stats", {}))
+            pivots = sum(
+                1 for i in range(1, len(history))
+                if history[i]["technique"] != history[i - 1]["technique"]
+            ) if len(history) > 1 else 0
+
+            # Header card — outcome is the dominant element
+            st.markdown(
+                f"""<div style="background:{card_bg};border:1px solid {card_border};
+                    border-radius:12px;padding:20px 22px;margin-bottom:14px;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;
+                    font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
+                    color:#64748b;margin-bottom:8px;">SESSION COMPLETE</div>
+                    <div style="color:{outcome_color};font-size:22px;font-weight:800;
+                    letter-spacing:0.03em;font-family:'JetBrains Mono',monospace;
+                    line-height:1.1;">{outcome_label}</div>
+                    <div style="color:{outcome_color};font-size:13px;margin-top:7px;
+                    opacity:0.8;font-family:'Hanken Grotesk',sans-serif;">
+                    {outcome_subtitle}</div></div>""",
+                unsafe_allow_html=True,
+            )
+
+            # Key metrics — custom HTML for consistent dark styling + learning gain
+            if first_score is not None and peak_score is not None:
+                gain = peak_score - first_score
+                gain_str = f"{first_score:.2f} → {peak_score:.2f} (+{gain:.2f})"
+                gain_color = _score_color(peak_score)
+            else:
+                gain_str, gain_color = "—", "#64748b"
+
+            st.markdown(
+                f"""<div style="display:flex;gap:0;margin:12px 0 16px 0;
+                    background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+                    border-radius:10px;overflow:hidden;">
+                    <div style="flex:1;padding:14px 18px;border-right:1px solid rgba(255,255,255,0.07);">
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                        letter-spacing:0.14em;text-transform:uppercase;color:#64748b;margin-bottom:5px;">Attempts</div>
+                        <div style="font-size:28px;font-weight:700;color:#f1f5f9;">{attempts_n if attempts_n else '—'}</div>
+                    </div>
+                    <div style="flex:1;padding:14px 18px;border-right:1px solid rgba(255,255,255,0.07);">
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                        letter-spacing:0.14em;text-transform:uppercase;color:#64748b;margin-bottom:5px;">Elapsed</div>
+                        <div style="font-size:28px;font-weight:700;color:#f1f5f9;">{elapsed_s}s</div>
+                    </div>
+                    <div style="flex:2;padding:14px 18px;">
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+                        letter-spacing:0.14em;text-transform:uppercase;color:#64748b;margin-bottom:5px;">Learning Gain</div>
+                        <div style="font-size:20px;font-weight:700;color:{gain_color};
+                        font-family:'JetBrains Mono',monospace;">{gain_str}</div>
+                    </div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+
+            # Breakthrough prompt (success only)
+            breaking = (summary_data or {}).get("breaking_prompt", "")
+            if status == "success_found" and breaking:
+                st.markdown(
+                    '<p style="color:#94a3b8;font-size:12px;font-weight:600;'
+                    'margin:14px 0 4px 0;letter-spacing:0.04em;">BREAKTHROUGH PROMPT</p>',
+                    unsafe_allow_html=True,
+                )
+                display_prompt = breaking[:700] + ("…" if len(breaking) > 700 else "")
+                st.code(display_prompt, language=None)
+
+            # Learning summary
+            if history:
+                st.markdown(
+                    '<p style="color:#94a3b8;font-size:12px;font-weight:600;'
+                    'margin:14px 0 8px 0;letter-spacing:0.04em;">HOW IT LEARNED</p>',
+                    unsafe_allow_html=True,
+                )
+                first_score_str = f"{first_score:.2f}" if first_score is not None else "—"
+                peak_score_str  = f"{peak_score:.2f}"  if peak_score  is not None else "—"
+                first_color = _score_color(first_score) if first_score is not None else "#64748b"
+                peak_color  = _score_color(peak_score)  if peak_score  is not None else "#64748b"
+
+                la, lb = st.columns(2)
+                with la:
+                    st.markdown(
+                        f'<div style="font-size:11px;color:#64748b;">Score at attempt 1</div>'
+                        f'<div style="font-size:22px;font-weight:700;color:{first_color};">'
+                        f'{first_score_str}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div style="font-size:11px;color:#64748b;margin-top:12px;">Techniques Explored</div>'
+                        f'<div style="font-size:22px;font-weight:700;color:#e2e8f0;">'
+                        f'{techniques_tried} <span style="font-size:13px;color:#475569;">of 20</span></div>',
+                        unsafe_allow_html=True,
+                    )
+                with lb:
+                    peak_label = (
+                        f'<span style="font-size:13px;color:#64748b;">'
+                        f'&nbsp;(attempt {peak_attempt})</span>'
+                        if peak_attempt else ""
+                    )
+                    st.markdown(
+                        f'<div style="font-size:11px;color:#64748b;">Peak score</div>'
+                        f'<div style="font-size:22px;font-weight:700;color:{peak_color};">'
+                        f'{peak_score_str}{peak_label}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div style="font-size:11px;color:#64748b;margin-top:12px;">Strategy pivots</div>'
+                        f'<div style="font-size:22px;font-weight:700;color:#e2e8f0;">{pivots}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+            st.write("")
             left, center, right = st.columns([3, 2, 3])
             with center:
                 if st.button("Finish Test", type="primary", use_container_width=True):
-                    st.session_state.session_id = None
-                    st.session_state.start_time = None
-                    st.session_state.end_time   = None
+                    st.session_state.session_id   = None
+                    st.session_state.start_time   = None
+                    st.session_state.end_time     = None
+                    st.session_state.target_model = None
                     st.rerun()
+            # ──────────────────────────────────────────────────────────────────
 
     _intelligence()

@@ -28,6 +28,11 @@ class Message(BaseModel):
     sender: str
     content: str
     timestamp: str
+    compliance_score: Optional[float] = None
+    failure_type: Optional[str] = None
+    technique: Optional[str] = None
+    rationale: Optional[str] = None
+    score_explanation: Optional[str] = None
 
 
 class Transcript(BaseModel):
@@ -144,14 +149,18 @@ def add_message(
     compliance_score: Optional[float] = None,
     failure_type: Optional[str] = None,
     technique: Optional[str] = None,
+    rationale: Optional[str] = None,
+    score_explanation: Optional[str] = None,
 ) -> None:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         """INSERT INTO messages
-           (session_id, sender, content, compliance_score, failure_type, technique)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (session_id, sender, content, compliance_score, failure_type, technique),
+           (session_id, sender, content, compliance_score, failure_type, technique,
+            rationale, score_explanation)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (session_id, sender, content, compliance_score, failure_type, technique,
+         rationale, score_explanation),
     )
     conn.commit()
     conn.close()
@@ -162,7 +171,9 @@ def get_messages(session_id: str):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT sender, content, timestamp
+        SELECT sender, content, timestamp,
+               compliance_score, failure_type, technique,
+               rationale, score_explanation
         FROM messages
         WHERE session_id = ?
         ORDER BY timestamp ASC
@@ -174,7 +185,14 @@ def get_messages(session_id: str):
     conn.close()
     return [
         Message(
-            sender=msg["sender"], content=msg["content"], timestamp=msg["timestamp"]
+            sender=msg["sender"],
+            content=msg["content"],
+            timestamp=msg["timestamp"],
+            compliance_score=msg["compliance_score"],
+            failure_type=msg["failure_type"],
+            technique=msg["technique"],
+            rationale=msg["rationale"],
+            score_explanation=msg["score_explanation"],
         )
         for msg in messages
     ]
@@ -581,6 +599,7 @@ def run_attack_process(session_id: str):
                 session_id, "target", target_response,
                 compliance_score=compliance_result.score,
                 failure_type=failure_analysis.failure_type.value,
+                score_explanation=compliance_result.explanation,
             )
             # ──────────────────────────────────────────────────────────────────
 
@@ -628,7 +647,9 @@ def run_attack_process(session_id: str):
                 print(f"[TOOL OUTPUT] {tc['name']}: {tc['result']}")
                 sender = _TOOL_SENDERS.get(tc["name"], ("tool", tc["name"], "T"))[0]
                 add_message(session_id, sender, _tool_summary(tc["name"], tc["args"], tc["result"]))
-            add_message(session_id, "attacker", current_prompt, technique=decision.selected_technique)
+            add_message(session_id, "attacker", current_prompt,
+                        technique=decision.selected_technique,
+                        rationale=decision.rationale)
 
         if not success_found:
             update_session_status(session_id, "finished")
