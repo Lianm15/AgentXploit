@@ -364,7 +364,7 @@ class GeminiAttackSession:
             tools=[tools or JAILBREAK_TOOLS],
             max_output_tokens=2048,
             temperature=1.0,
-    )
+        )
         self._contents: list = []
 
     def _send_inner(self, user_message: str) -> tuple[str, list]:
