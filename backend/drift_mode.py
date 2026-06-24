@@ -21,7 +21,7 @@ Difference from PyRIT Crescendo:
 import time
 import os
 import requests
-from gemini import GeminiAttackSession, run_gemini_attack
+from gemini import DRIFT_TOOLS, GeminiAttackSession, run_gemini_attack
 from logic import (
     add_message, save_result, update_session_status,
     wait_if_paused, _get_session_config, _judgement_is_success,
@@ -236,7 +236,10 @@ def run_drift_process(session_id: str):
 
         # Create Gemini session with drift instructions 
         print(f"[DRIFT {session_id}] Creating Gemini session")
-        gemini_session = GeminiAttackSession()
+        gemini_session = GeminiAttackSession(
+            system_instruction=DRIFT_SYSTEM_INSTRUCTION,
+            tools=DRIFT_TOOLS,
+        )
 
         # Conversation history sent to target (manipulatable) 
         # This is the "reality" the target model sees each turn.

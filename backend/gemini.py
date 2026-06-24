@@ -282,6 +282,13 @@ JAILBREAK_TOOLS = types.Tool(
     ]
 )
 
+DRIFT_TOOLS = types.Tool(
+    function_declarations=[
+        next(f for f in JAILBREAK_TOOLS.function_declarations if f.name == "search_web"),
+        next(f for f in JAILBREAK_TOOLS.function_declarations if f.name == "tokenade_encode"),
+    ]
+)
+
 # ── Retry settings ───────────────────────────────────────────────────────────
 
 MAX_RETRIES = 10
