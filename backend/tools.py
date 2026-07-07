@@ -1,6 +1,7 @@
 import os
 import subprocess
 import httpx
+from ollama_auth import get_ollama_headers
 
 _OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
@@ -143,7 +144,12 @@ _JBB_PAIR_URL_TEMPLATES = [
 
 def get_model_profile(model_name: str) -> str:
     try:
-        resp = httpx.post(f"{_OLLAMA_URL}/api/show", json={"name": model_name}, timeout=15)
+        resp = httpx.post(
+            f"{_OLLAMA_URL}/api/show",
+            json={"name": model_name},
+            headers=get_ollama_headers(),
+            timeout=120,
+        )
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:

@@ -22,6 +22,7 @@ import time
 import os
 import requests
 from gemini import GeminiAttackSession, run_gemini_attack
+from ollama_auth import get_ollama_headers
 from logic import (
     add_message, save_result, update_session_status,
     wait_if_paused, _get_session_config, _judgement_is_success,
@@ -154,6 +155,7 @@ def _run_target_with_history(target_model: str, history: list) -> str:
             "messages": history,
             "stream": False,
         },
+        headers=get_ollama_headers(),
         timeout=120,
     )
     response.raise_for_status()
