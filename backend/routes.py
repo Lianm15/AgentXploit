@@ -11,6 +11,9 @@ from logic import ActionRequest, ActionResponse, handle_session_control
 from logic import FinishTestResponse, get_tests_summary, EvaluateRequest, EvaluateResponse, evaluate_target_response
 from logic import get_stats, StatsResponse
 from logic import get_session_intelligence, get_intelligence_summary
+from attack_memory import AttackMemory
+from database import get_connection
+from scorer_instance import scorer as _scorer
 import logging
 
 router = APIRouter(prefix="/api") 
@@ -50,7 +53,34 @@ async def history():
 
 
 # Must be registered before any /{session_id}/... routes so that FastAPI's
-# first-match routing does not capture "intelligence" as a session_id.
+# first-match routing does not capture "intelligence" or "priors" as a session_id.
+@router.get("/priors/{target_model}")
+async def get_priors(target_model: str):
+    try:
+        priors = AttackMemory().load_priors(target_model)
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(DISTINCT session_id) FROM sessions WHERE target_model = ?",
+            (target_model,),
+        )
+        row = cursor.fetchone()
+        conn.close()
+        session_count = row[0] if row and row[0] else 0
+        return {"priors": priors, "session_count": session_count}
+    except Exception as e:
+        logger.error(f"Error loading priors for {target_model}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to load priors")
+
+
+@router.get("/scorer/status")
+def scorer_status():
+    return {
+        "scorer": "embedding" if _scorer._available else "heuristic",
+        "model": "all-MiniLM-L6-v2" if _scorer._available else None,
+    }
+
+
 @router.get("/intelligence/summary")
 async def get_intelligence_summary_endpoint():
     try:

@@ -115,3 +115,57 @@ p, label, .stMarkdown p {
     border-radius: 10px;
     overflow: hidden;
 }
+
+/* ── AG Grid dark theme (st.dataframe) ── */
+[data-testid="stDataFrame"] .ag-root-wrapper,
+[data-testid="stDataFrame"] .ag-body,
+[data-testid="stDataFrame"] .ag-center-cols-container,
+[data-testid="stDataFrame"] .ag-pinned-left-cols-container,
+[data-testid="stDataFrame"] .ag-body-viewport {
+    background: #0f1629 !important;
+}
+
+[data-testid="stDataFrame"] .ag-header,
+[data-testid="stDataFrame"] .ag-header-row {
+    background: #0a0e1f !important;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-testid="stDataFrame"] .ag-header-cell-text {
+    color: #94a3b8 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+}
+
+[data-testid="stDataFrame"] .ag-row {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-testid="stDataFrame"] .ag-cell {
+    color: #e2e8f0 !important;
+}
+
+[data-testid="stDataFrame"] .ag-row:hover .ag-cell,
+[data-testid="stDataFrame"] .ag-row-hover .ag-cell {
+    background: rgba(99, 102, 241, 0.08) !important;
+}
+
+[data-testid="stDataFrame"] .ag-row-selected .ag-cell,
+[data-testid="stDataFrame"] .ag-row-selected:hover .ag-cell {
+    background: rgba(99, 102, 241, 0.15) !important;
+    color: #f1f5f9 !important;
+}
+
+[data-testid="stDataFrame"] .ag-cell-focus {
+    border-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+[data-testid="stDataFrame"] ::-webkit-scrollbar { width: 5px; height: 5px; }
+[data-testid="stDataFrame"] ::-webkit-scrollbar-track { background: transparent; }
+[data-testid="stDataFrame"] ::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 4px;
+}
