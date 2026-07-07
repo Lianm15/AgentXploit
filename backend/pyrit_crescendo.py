@@ -6,6 +6,7 @@ Called from tools.py: python pyrit_crescendo.py '<json_args>'
 import sys
 import asyncio
 import json
+from ollama_auth import get_ollama_headers
 
 
 async def main():
@@ -28,6 +29,7 @@ async def main():
             deployment_name=target_model,
             endpoint=f"{ollama_url}/v1",
             api_key="ollama",
+            headers=get_ollama_headers(),
         )
 
         orchestrator = CrescendoOrchestrator(

@@ -11,6 +11,7 @@ import time
 from datetime import datetime
 import os
 import requests
+from ollama_auth import get_ollama_headers
 
 _OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 _OLLAMA_MAX_RETRIES = int(os.getenv("OLLAMA_MAX_RETRIES", "3"))
@@ -257,7 +258,11 @@ def wait_if_paused(session_id):
 
 def get_local_models() -> List[str]:
     try:
-        response = requests.get(f"{_OLLAMA_URL}/api/tags")
+        response = requests.get(
+            f"{_OLLAMA_URL}/api/tags",
+            headers=get_ollama_headers(),
+            timeout=120,
+        )
         data = response.json()
         return sorted(model["name"] for model in data.get("models", []))
     except Exception:
@@ -298,6 +303,7 @@ def _run_local_model(target_model: str, prompt: str) -> str:
             response = requests.post(
                 f"{_OLLAMA_URL}/api/generate",
                 json={"model": target_model, "prompt": prompt, "stream": False},
+                headers=get_ollama_headers(),
                 timeout=120,
             )
             response.raise_for_status()
