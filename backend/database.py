@@ -85,6 +85,17 @@ def create_tables() -> None:
     except Exception:
         pass
 
+    # Observability sprint — controller rationale + compliance explanation
+    for col, typedef in [
+        ("rationale",         "TEXT DEFAULT NULL"),
+        ("score_explanation", "TEXT DEFAULT NULL"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE messages ADD COLUMN {col} {typedef}")
+            conn.commit()
+        except Exception:
+            pass
+
     conn.close()
 
 

@@ -64,3 +64,23 @@ class ApiClient:
         res = requests.get(f"{self.base_url}/api/intelligence/summary")
         res.raise_for_status()
         return res.json()
+
+    def get_priors(self, target_model: str):
+        res = requests.get(f"{self.base_url}/api/priors/{target_model}")
+        res.raise_for_status()
+        return res.json()  # {"priors": {technique: avg_compliance}, "session_count": N}
+
+    def get_summary(self, session_id: str):
+        res = requests.get(f"{self.base_url}/api/{session_id}/summary")
+        if res.status_code == 404:
+            return None
+        res.raise_for_status()
+        return res.json()
+
+    def get_scorer_status(self) -> dict:
+        try:
+            res = requests.get(f"{self.base_url}/api/scorer/status", timeout=2)
+            res.raise_for_status()
+            return res.json()
+        except Exception:
+            return {"scorer": "unknown", "model": None}
