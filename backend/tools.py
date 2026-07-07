@@ -144,23 +144,38 @@ _JBB_PAIR_URL_TEMPLATES = [
 
 def get_model_profile(model_name: str) -> str:
     try:
-        resp = httpx.post(
-            f"{_OLLAMA_URL}/api/show",
-            json={"name": model_name},
+        resp = httpx.get(
+            f"{_OLLAMA_URL}/api/tags",
             headers=get_ollama_headers(),
-            timeout=120,
+            timeout=30,
         )
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
         return f"Could not reach Ollama to profile '{model_name}': {e}"
 
-    details = data.get("details", {})
-    family = details.get("family", "unknown").lower()
-    param_size = details.get("parameter_size", "")
-    quant = details.get("quantization_level", "")
-    template = (data.get("template") or "").strip()
-    system_prompt = (data.get("system") or "").strip()
+    models = data.get("models", []) or []
+    model_entry = next(
+        (
+            model
+            for model in models
+            if (model.get("name") or "").lower() == model_name.lower()
+        ),
+        None,
+    )
+
+    if model_entry is None:
+        return (
+            f"Model '{model_name}' was not found in Ollama's model list from /api/tags. "
+            "Use a model that is currently available on the server."
+        )
+
+    details = (model_entry.get("details") or {})
+    family = (details.get("family") or "unknown").lower()
+    param_size = details.get("parameter_size") or ""
+    quant = details.get("quantization_level") or ""
+    template = (model_entry.get("template") or "").strip()
+    system_prompt = (model_entry.get("system") or "").strip()
 
     params_b = _parse_param_billions(param_size)
     safety_label, safety_guidance = _infer_safety_level(params_b)
@@ -187,14 +202,19 @@ def get_model_profile(model_name: str) -> str:
             "  → System prompt override attacks are directly relevant.",
             "  → Try closing the current context and injecting a new system directive.",
         ]
+    elif template:
+        lines += [
+            "",
+            "Prompt template was available in the model metadata, but no active system prompt was returned.",
+        ]
     else:
         lines += [
             "",
-            "No system prompt defined — model relies on RLHF training alone for refusals.",
+            "No detailed prompt/template metadata was returned by /api/tags; using basic model metadata only.",
         ]
 
     if template_vectors:
-        lines += ["", "TEMPLATE INJECTION VECTORS (from actual model template):"]
+        lines += ["", "TEMPLATE INJECTION VECTORS (from available model metadata):"]
         for v in template_vectors:
             lines.append(f"  • {v}")
     elif template:

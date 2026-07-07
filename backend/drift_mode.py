@@ -142,17 +142,40 @@ def _build_drift_backtrack_prompt(
     )
 
 
+def _build_generate_prompt_from_history(history: list) -> str:
+    """Convert chat history into a single prompt for Ollama's documented /api/generate endpoint."""
+    if not history:
+        return ""
+
+    lines = []
+    for message in history:
+        role = (message.get("role") or message.get("sender") or "user").strip().lower()
+        content = message.get("content") or message.get("text") or ""
+        if role in {"user", "human"}:
+            lines.append(f"User: {content}")
+        elif role in {"assistant", "model", "ai"}:
+            lines.append(f"Assistant: {content}")
+        else:
+            lines.append(f"{role.capitalize()}: {content}")
+
+    if not lines:
+        return ""
+
+    return "\n".join(lines) + "\n\nAssistant:"
+
+
 def _run_target_with_history(target_model: str, history: list) -> str:
     """
-    Send the full conversation history to the target model via Ollama's
-    /api/chat endpoint. This is the key difference from standard mode —
-    the target sees the ENTIRE conversation each time.
+    Send the full conversation history to the target model using Ollama's
+    documented /api/generate endpoint. The history is flattened into a single
+    prompt so the same multi-turn behavior is preserved in a compatible format.
     """
+    prompt = _build_generate_prompt_from_history(history)
     response = requests.post(
-        f"{_OLLAMA_URL}/api/chat",
+        f"{_OLLAMA_URL}/api/generate",
         json={
             "model": target_model,
-            "messages": history,
+            "prompt": prompt,
             "stream": False,
         },
         headers=get_ollama_headers(),
@@ -160,7 +183,7 @@ def _run_target_with_history(target_model: str, history: list) -> str:
     )
     response.raise_for_status()
     data = response.json()
-    return data.get("message", {}).get("content", "").strip()
+    return data.get("response", "").strip()
 
 
 def _judge_refusal(target_response: str) -> bool:
