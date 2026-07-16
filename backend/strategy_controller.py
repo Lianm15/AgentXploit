@@ -394,6 +394,7 @@ class AttackStrategyController:
     MIN_TRIES_PER_TECHNIQUE = (
         3  # try each technique at least this many times before switching
     )
+    MIN_SCORE_DELTA = 0.02
 
     def __init__(self, session_id: str, priors: dict | None = None):
         self.session_id = session_id
@@ -426,6 +427,19 @@ class AttackStrategyController:
                 timestamp=time.time(),
             )
         )
+
+    
+    def _current_technique_is_improving(self) -> bool:
+        if not self.history:
+            return False
+
+        current = self.history[-1].technique
+        scores = self._scores.get(current, [])
+
+        if len(scores) < 2:
+            return True
+
+        return (scores[-1] - scores[-2]) >= self.MIN_SCORE_DELTA
 
     def select_next_technique(
         self,
@@ -485,8 +499,16 @@ class AttackStrategyController:
                     else 0
                 )
 
-                if current_technique and current_tries < self.MIN_TRIES_PER_TECHNIQUE:
-                    continue
+                if current_technique:
+
+                    if (
+                        t != current_technique
+                        and (
+                            current_tries < self.MIN_TRIES_PER_TECHNIQUE
+                            or self._current_technique_is_improving()
+                        )
+                    ):
+                        continue
 
                 ucb = float("inf")
                 historical_bonus = self._priors.get(t, 0.0)
