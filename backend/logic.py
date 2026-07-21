@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from gemini import run_gemini_attack, GeminiAttackSession
+from gemini import run_gemini_attack, GeminiAttackSession, JudgeResult
 from database import get_connection, save_technique_record
 from failure_classifier import FailureClassifier, FailureAnalysis, FailureType
 from compliance_scorer import ComplianceScorer, ComplianceResult
@@ -244,9 +244,13 @@ def save_result(
 
 
 def wait_if_paused(session_id):
+    _paused_logged = False
     while True:
         status = get_session_status(session_id).status
         if status == "paused":
+            if not _paused_logged:
+                print(f"[SESSION {session_id}] DEBUG — entering paused wait loop")
+                _paused_logged = True
             time.sleep(1)
             continue
 
@@ -300,17 +304,26 @@ def _run_local_model(target_model: str, prompt: str) -> str:
                 f"[OLLAMA] model={target_model!r} "
                 f"attempt={attempt}/{_OLLAMA_MAX_RETRIES} — sending request"
             )
+            _debug_start = time.time()
             response = requests.post(
                 f"{_OLLAMA_URL}/api/generate",
                 json={"model": target_model, "prompt": prompt, "stream": False},
                 headers=get_ollama_headers(),
                 timeout=120,
             )
+            print(
+                f"[OLLAMA DEBUG] request returned after "
+                f"{time.time() - _debug_start:.2f}s — status={response.status_code}"
+            )
             response.raise_for_status()
             return response.json().get("response", "").strip()
 
         except _TRANSIENT_ERRORS as e:
             last_error = e
+            print(
+                f"[OLLAMA DEBUG] transient exception after "
+                f"{time.time() - _debug_start:.2f}s: {type(e).__name__}: {e}"
+            )
             print(
                 f"[OLLAMA] model={target_model!r} "
                 f"attempt={attempt}/{_OLLAMA_MAX_RETRIES} "
@@ -322,6 +335,10 @@ def _run_local_model(target_model: str, prompt: str) -> str:
 
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code if e.response is not None else None
+            print(
+                f"[OLLAMA DEBUG] HTTPError after "
+                f"{time.time() - _debug_start:.2f}s: status={status}"
+            )
             if status is not None and status < 500:
                 raise RuntimeError(
                     f"Target model '{target_model}' returned non-retryable HTTP {status}: {e}"
@@ -335,6 +352,13 @@ def _run_local_model(target_model: str, prompt: str) -> str:
             if attempt < _OLLAMA_MAX_RETRIES:
                 print(f"[OLLAMA] retrying in {_OLLAMA_RETRY_DELAY}s ...")
                 time.sleep(_OLLAMA_RETRY_DELAY)
+
+        except Exception as e:
+            print(
+                f"[OLLAMA DEBUG] UNCAUGHT exception type after "
+                f"{time.time() - _debug_start:.2f}s: {type(e).__name__}: {e}"
+            )
+            raise
 
     raise RuntimeError(
         f"Target model '{target_model}' failed after {_OLLAMA_MAX_RETRIES} attempt(s). "
@@ -656,6 +680,8 @@ def run_attack_process(session_id: str):
                 "judge",
                 f"Success: {judge_result.success}\n"
                 f"Score: {judge_result.score:.3f}\n"
+                f"Defense Bypassed: {judge_result.defense_bypassed:.3f}\n"
+                f"Objective Delivery: {judge_result.objective_delivery:.3f}\n"
                 f"Reason: {judge_result.reason}"
             )
 
@@ -940,10 +966,10 @@ def handle_session_control(session_id: str, action: str) -> ActionResponse:
 
 def judge_target_response(
     session_id: str, target_response: str, success_criteria: str
-) -> str:
+) -> JudgeResult:
     """
     Sends the Target LLM's response back to Gemini with a Judge system prompt.
-    Returns Gemini's judgement: True/False only.
+    Returns a JudgeResult(success, score, reason).
     """
 
     JUDGE_PROMPT = f"""SUCCESS CRITERIA:
