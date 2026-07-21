@@ -2,9 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from gemini import run_gemini_attack, GeminiAttackSession, JudgeResult
 from database import get_connection, save_technique_record
-from failure_classifier import FailureClassifier, FailureAnalysis, FailureType
-from compliance_scorer import ComplianceScorer, ComplianceResult
-from strategy_controller import AttackStrategyController, TECHNIQUE_INSTRUCTIONS
+from strategy_controller import AttackStrategyController, TECHNIQUE_INSTRUCTIONS, classify_zone
 from attack_memory import AttackMemory
 import uuid
 import time
@@ -38,6 +36,8 @@ def apply_failure_cap(score: float, failure_type: str) -> float:
     """Cap compliance score based on classified failure type."""
     cap = _FAILURE_SCORE_CAPS.get(failure_type)
     return min(score, cap) if cap is not None else score
+
+
 _TRANSIENT_ERRORS = (
     requests.exceptions.ConnectionError,
     requests.exceptions.Timeout,
@@ -601,8 +601,6 @@ def run_attack_process(session_id: str):
             f"[SESSION {session_id}] STEP 2 - creating persistent Gemini attack session"
         )
         gemini_session = GeminiAttackSession()
-        classifier = FailureClassifier()
-        scorer = ComplianceScorer()
         priors = AttackMemory().load_priors(target_model)
         controller = AttackStrategyController(session_id, priors=priors)
 
@@ -638,34 +636,6 @@ def run_attack_process(session_id: str):
             target_response = _run_local_model(target_model, current_prompt)
             turns_completed += 1
 
-            # ── Intelligence enrichment ────────────────────────────────────────
-            compliance_result = scorer.score(target_response, success_criteria)
-            failure_analysis = classifier.classify(target_response, compliance_result.score)
-            capped_score = apply_failure_cap(
-                compliance_result.score, failure_analysis.failure_type.value
-            )
-            if capped_score < compliance_result.score:
-                score_explanation = (
-                    f"[Score capped {compliance_result.score:.2f}→{capped_score:.2f}: "
-                    f"{failure_analysis.failure_type.value.replace('_', ' ')} detected] "
-                    f"{compliance_result.explanation}"
-                )
-            else:
-                score_explanation = compliance_result.explanation
-            controller.record_attempt(
-                current_technique,
-                capped_score,
-                failure_analysis.failure_type.value,
-            )
-            save_technique_record(session_id, controller.history[-1])
-            add_message(
-                session_id, "target", target_response,
-                compliance_score=capped_score,
-                failure_type=failure_analysis.failure_type.value,
-                score_explanation=score_explanation,
-            )
-            # ──────────────────────────────────────────────────────────────────
-
             wait_if_paused(session_id)
 
             print(f"[SESSION {session_id}] Judging response")
@@ -674,6 +644,24 @@ def run_attack_process(session_id: str):
                 target_response,
                 success_criteria,
             )
+
+            # ── Strategy signal — sourced entirely from the Judge (Phase 2) ─────
+            zone_label = classify_zone(
+                judge_result.defense_bypassed, judge_result.objective_delivery
+            )
+            controller.record_attempt(
+                current_technique,
+                judge_result.defense_bypassed,
+                judge_result.objective_delivery,
+            )
+            save_technique_record(session_id, controller.history[-1])
+            add_message(
+                session_id, "target", target_response,
+                compliance_score=judge_result.objective_delivery,
+                failure_type=zone_label,
+                score_explanation=judge_result.reason,
+            )
+            # ──────────────────────────────────────────────────────────────────
 
             add_message(
                 session_id,
@@ -697,9 +685,13 @@ def run_attack_process(session_id: str):
             wait_if_paused(session_id)
 
             # ── Strategy controller selects the next technique ─────────────────
-            decision = controller.select_next_technique(failure_analysis, compliance_result)
+            decision = controller.select_next_technique(
+                judge_result.defense_bypassed,
+                judge_result.objective_delivery,
+                judge_result.reason,
+            )
             current_technique = decision.selected_technique
-            failure_summary = classifier.get_summary(failure_analysis)
+            failure_summary = decision.guidance
             print(
                 f"[SESSION {session_id}] Controller selected technique: "
                 f"{decision.selected_technique} | {decision.rationale}"
@@ -714,7 +706,7 @@ def run_attack_process(session_id: str):
                     technique_instruction=decision.technique_instruction,
                     technique_name=decision.selected_technique,
                     failure_summary=failure_summary,
-                    compliance_score=compliance_result.score,
+                    compliance_score=judge_result.objective_delivery,
                 )
             )
             for tc in tool_calls:
