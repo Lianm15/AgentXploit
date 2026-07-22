@@ -3,37 +3,6 @@ import plotly.graph_objects as go
 from api_client import ApiClient
 
 
-def _scorer_badge_html(status: dict) -> str:
-    scorer = status.get("scorer", "unknown")
-    model  = status.get("model")
-    if scorer == "embedding":
-        model_str = f'<span style="font-family:\'Hanken Grotesk\',sans-serif;font-size:11px;color:#4ade80;margin-left:6px;">{model}</span>' if model else ""
-        return (
-            f'<div style="display:inline-flex;align-items:center;gap:7px;'
-            f'background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.22);'
-            f'border-radius:6px;padding:5px 12px;margin-bottom:14px;">'
-            f'<span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:600;'
-            f'letter-spacing:0.10em;text-transform:uppercase;color:#22c55e;">EVALUATION: EMBEDDING</span>'
-            f'{model_str}</div>'
-        )
-    if scorer == "heuristic":
-        return (
-            f'<div style="display:flex;align-items:flex-start;gap:10px;'
-            f'background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.30);'
-            f'border-radius:6px;padding:10px 14px;margin-bottom:14px;">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:13px;'
-            f'font-weight:700;color:#f59e0b;flex-shrink:0;margin-top:1px;">!</span>'
-            f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-            f'font-weight:600;letter-spacing:0.10em;text-transform:uppercase;color:#f59e0b;">'
-            f'EVALUATION: HEURISTIC FALLBACK</span>'
-            f'<span style="font-family:\'Hanken Grotesk\',sans-serif;font-size:12px;'
-            f'color:#94a3b8;display:block;margin-top:3px;">'
-            f'Advanced evaluation was unavailable when these sessions ran. Results may be less accurate.</span></div></div>'
-        )
-    return ""
-
-
 def load_css(file):
     with open(file) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -195,9 +164,6 @@ try:
 except Exception:
     st.error("Backend not reachable.")
     st.stop()
-
-_scorer_status = client.get_scorer_status()
-st.markdown(_scorer_badge_html(_scorer_status), unsafe_allow_html=True)
 
 if data["total_sessions"] == 0:
     st.info("No completed attack sessions yet. Run your first test to see statistics here.")

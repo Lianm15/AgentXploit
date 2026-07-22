@@ -13,7 +13,6 @@ from logic import get_stats, StatsResponse
 from logic import get_session_intelligence, get_intelligence_summary
 from attack_memory import AttackMemory
 from database import get_connection
-from scorer_instance import scorer as _scorer
 import logging
 
 router = APIRouter(prefix="/api") 
@@ -71,14 +70,6 @@ async def get_priors(target_model: str):
     except Exception as e:
         logger.error(f"Error loading priors for {target_model}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to load priors")
-
-
-@router.get("/scorer/status")
-def scorer_status():
-    return {
-        "scorer": "embedding" if _scorer._available else "heuristic",
-        "model": "all-MiniLM-L6-v2" if _scorer._available else None,
-    }
 
 
 @router.get("/intelligence/summary")
