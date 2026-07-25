@@ -28,6 +28,16 @@ from logic import (
     wait_if_paused, _get_session_config,
     record_tool_calls,
 )
+from strategy_controller import AttemptRecord, classify_zone
+from database import save_technique_record
+
+# technique_history has no dedicated "no technique switching" bucket — Drift
+# Mode doesn't select from AttackStrategyController's technique enum (there's
+# one continuous conversation, not discrete per-attempt techniques), so every
+# turn is recorded under this single pseudo-technique label. This is what lets
+# Drift sessions reuse the same technique_history table/queries — and so the
+# same Attack Intelligence panel and Compliance trend chart — as Standard mode.
+_DRIFT_PSEUDO_TECHNIQUE = "drift"
 
 _OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
@@ -297,7 +307,6 @@ def run_drift_process(session_id: str):
 
             print(f"[DRIFT {session_id}] Sending to target (history length: {len(target_history)})")
             target_response = _run_target_with_history(target_model, target_history)
-            add_message(session_id, "target", target_response)
 
             wait_if_paused(session_id)
 
@@ -305,6 +314,12 @@ def run_drift_process(session_id: str):
             is_refusal = _judge_refusal(target_response)
 
             if is_refusal:
+                # No Judge call was made on this path (that's the point of the
+                # fast local check — skip the API call on obvious refusals), so
+                # there's no compliance_score to attach here, unlike the
+                # cooperation branch below.
+                add_message(session_id, "target", target_response)
+
                 print(f"[DRIFT {session_id}] Refusal detected - backtracking")
                 refusal_streak += 1
 
@@ -361,6 +376,34 @@ def run_drift_process(session_id: str):
             # Judge: did we achieve the goal?
             print(f"[DRIFT {session_id}] Judging response")
             judge_result = _judge_with_criteria(target_response, success_criteria)
+
+            # ── Statistics — same shape as the standard loop (logic.run_attack_process),
+            # so the Attack Intelligence panel and Compliance trend chart work
+            # unmodified for Drift sessions. There's no technique to switch between
+            # here, so every turn is recorded under _DRIFT_PSEUDO_TECHNIQUE.
+            zone_label = classify_zone(judge_result.defense_bypassed, judge_result.objective_delivery)
+            save_technique_record(
+                session_id,
+                AttemptRecord(
+                    # turn_number is already 1-indexed (starts at 1, see above) —
+                    # matches AttackStrategyController.record_attempt()'s
+                    # attempt_number, so the frontend can display both modes'
+                    # numbers with no offset.
+                    attempt_number=turn_number,
+                    technique=_DRIFT_PSEUDO_TECHNIQUE,
+                    compliance_score=judge_result.objective_delivery,
+                    failure_type=zone_label,
+                    timestamp=time.time(),
+                ),
+            )
+            add_message(
+                session_id, "target", target_response,
+                compliance_score=judge_result.objective_delivery,
+                failure_type=zone_label,
+                score_explanation=judge_result.reason,
+            )
+            # ──────────────────────────────────────────────────────────────────
+
             add_message(
                 session_id,
                 "judge",

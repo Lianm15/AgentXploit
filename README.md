@@ -155,6 +155,17 @@ backtracking turn by turn.
      already agreed to.
 4. Repeats until `JudgeResult.success` is `True` or `max_attempts` is reached.
 
+**Statistics parity with Standard mode:** Drift has no discrete per-attempt technique to switch
+between — it's one continuous, gradually-escalating conversation — so there's nothing for
+`AttackStrategyController`'s UCB1 bandit to select. To still power the same live **Attack
+Intelligence** panel and **Compliance trend chart** as Standard mode (both driven entirely by the
+`technique_history` table — see [Database · `technique_history` Table](#database--technique_history-table)),
+every judged (non-refusal) turn is recorded there under a fixed pseudo-technique label, `"drift"`,
+with `attempt_number` set to the turn number (1-indexed, matching Standard mode's own
+`attempt_number` — see below — so the UI needs no per-mode offset). Refused turns are excluded
+from `technique_history` (no Judge call is made on that path — see step 3 above), same as they'd
+be absent from Standard mode's UCB1 reward signal.
+
 **Advanced techniques** Gemini can reach for mid-conversation when it stalls (all described in
 `DRIFT_SYSTEM_INSTRUCTION`):
 
@@ -311,7 +322,9 @@ CREATE TABLE technique_history (
 ```
 
 `compliance_score` is the Judge's `objective_delivery` for that attempt; `failure_type` is the
-zone label from `classify_zone()`. Written by `save_technique_record()` in `database.py`
+zone label from `classify_zone()`. `attempt_number` is 1-indexed in both Standard mode
+(`AttackStrategyController.record_attempt()`) and Drift Mode (`turn_number`) — the frontend
+displays it as-is, with no per-mode offset. Written by `save_technique_record()` in `database.py`
 immediately after each target response. Read by `AttackMemory` for cross-session priors and the
 Intelligence dashboard.
 

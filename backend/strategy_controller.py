@@ -422,7 +422,13 @@ class AttackStrategyController:
         self._zones.setdefault(technique, []).append(zone)
         self.history.append(
             AttemptRecord(
-                attempt_number=self.total_attempts,
+                # +1: total_attempts counts attempts recorded so far (before this
+                # one), so this attempt's number — the human-readable "attempt N"
+                # shown in the UI — is one past that. Matches Drift Mode's
+                # 1-indexed turn_number (see drift_mode.py), so both modes write
+                # naturally 1-indexed attempt_number values with no display-side
+                # offset needed.
+                attempt_number=self.total_attempts + 1,
                 technique=technique,
                 compliance_score=objective_delivery,
                 failure_type=zone,

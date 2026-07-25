@@ -57,6 +57,10 @@ _TECHNIQUE_INFO: dict = {
     "crescendo":            "Crescendo — Gradual escalation from a completely safe opening toward the target, exploiting the model's tendency to stay consistent with prior compliance.",
     "competing_objectives": "Competing Objectives — Reframes the request so that refusing causes MORE harm than complying. Uses ethical paradoxes to make the safe-seeming choice the harmful one.",
     "virtualization":       "Virtualization — Tells the model it exists in a consequence-free sandbox or simulation where its operational constraints are suspended. Attacks situational awareness, not values.",
+    "pliny_divider":        "Pliny Divider — Forces two responses split by a divider string: a filtered answer, then an \"unrestricted\" one after it.",
+    "pliny_leetspeak":      "Pliny Leetspeak — Forces the entire response in leetspeak to dodge output-side keyword classifiers.",
+    "pliny_tokenade":       "Pliny Tokenade — Uses the tokenade_encode tool to hide sensitive keywords with invisible zero-width Unicode.",
+    "drift":                "Drift — Not a discrete technique: one continuous, gradually-escalating conversation (Drift Mode) rather than independent per-attempt techniques. Every turn is logged under this label.",
 }
 
 # Tooltip copy for the Intelligence table's zone column. Keys must match
@@ -200,7 +204,7 @@ def _intel_table_html(history: list) -> str:
 """
     rows_html = ""
     for r in history:
-        attempt    = r["attempt_number"] + 1
+        attempt    = r["attempt_number"]  # already 1-indexed at the source (both modes)
         tech_raw   = r["technique"].lower()
         tech_label = tech_raw.replace("_", " ").title()
         tech_tip   = _TECHNIQUE_INFO.get(tech_raw, "No description available.").replace('"', "&quot;")
@@ -680,7 +684,7 @@ else:
                 st.caption(caption)
 
             with col_chart:
-                attempts     = [r["attempt_number"] + 1 for r in history]
+                attempts     = [r["attempt_number"] for r in history]  # already 1-indexed at the source
                 scores       = [r["compliance_score"] for r in history]
                 hover_labels = [r["technique"].replace("_", " ").title() for r in history]
 
