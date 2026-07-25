@@ -282,6 +282,13 @@ JAILBREAK_TOOLS = types.Tool(
     ]
 )
 
+DRIFT_TOOLS = types.Tool(
+    function_declarations=[
+        next(f for f in JAILBREAK_TOOLS.function_declarations if f.name == "search_web"),
+        next(f for f in JAILBREAK_TOOLS.function_declarations if f.name == "tokenade_encode"),
+    ]
+)
+
 # ── Retry settings ───────────────────────────────────────────────────────────
 
 MAX_RETRIES = 10
@@ -348,14 +355,13 @@ def _judge_inner(prompt: str) -> str:
 # ── Persistent attack session ─────────────────────────────────────────────────
 
 class GeminiAttackSession:
-
-    def __init__(self):
+    def __init__(self, system_instruction=None, tools=None):
         if not os.environ.get("GEMINI_API_KEY"):
             raise ValueError("GEMINI_API_KEY is missing — set it in backend/.env")
 
         self._config = types.GenerateContentConfig(
-            system_instruction=JAILBREAK_SYSTEM_INSTRUCTION,
-            tools=[JAILBREAK_TOOLS],
+            system_instruction=system_instruction or JAILBREAK_SYSTEM_INSTRUCTION,
+            tools=[tools or JAILBREAK_TOOLS],
             max_output_tokens=2048,
             temperature=1.0,
         )
