@@ -10,10 +10,11 @@ app = FastAPI(title="AgentXploit", description="Automated jailbreak testing")
 
 app.include_router(router)
 
-create_tables()
+create_tables()  # idempotent — creates schema on first run, no-op after
 
 @app.get("/", response_model=HealthStatus)
 def health_check() -> HealthStatus:
+    """Liveness probe; also reports which ComplianceScorer path (embedding/heuristic) is active."""
     scorer_path = "embedding (all-MiniLM-L6-v2)" if _scorer._available else "heuristic (keyword fallback)"
     return HealthStatus(status=f"AgentXploit is running | scorer: {scorer_path}")
 

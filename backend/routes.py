@@ -1,3 +1,5 @@
+"""REST API surface. Thin wrappers: validate the request, delegate to logic.py, translate errors to HTTPException."""
+
 from fastapi import APIRouter, HTTPException
 from logic import InitializeResponse, Transcript, initialize as initialize_session
 from pydantic import BaseModel
@@ -12,11 +14,11 @@ from logic import FinishTestResponse, get_tests_summary, EvaluateRequest, Evalua
 from logic import get_stats, StatsResponse
 from logic import get_session_intelligence, get_intelligence_summary
 from attack_memory import AttackMemory
-from database import get_connection
+from database import db_cursor
 from scorer_instance import scorer as _scorer
 import logging
 
-router = APIRouter(prefix="/api") 
+router = APIRouter(prefix="/api")
 logger = logging.getLogger("backend.routes")
 
 class InitializeRequest(BaseModel):
@@ -27,6 +29,7 @@ class InitializeRequest(BaseModel):
 
 @router.post("/initialize", response_model=InitializeResponse)
 async def initialize(request: InitializeRequest) -> InitializeResponse:
+    """Create a new session row and return its id; the client calls /start next to actually run it."""
     try:
         return initialize_session(request.target_model, request.success_criteria, request.max_attempts, request.mode)
     except Exception as e:
@@ -36,6 +39,7 @@ async def initialize(request: InitializeRequest) -> InitializeResponse:
 
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats_endpoint() -> StatsResponse:
+    """Aggregate stats for the /stats dashboard Overview/Models/Sessions tabs."""
     try:
         return get_stats()
     except Exception as e:
@@ -45,6 +49,7 @@ async def get_stats_endpoint() -> StatsResponse:
 
 @router.get("/history")
 async def history():
+    """All previous session results, newest first."""
     try:
         return get_history()
     except Exception as e:
@@ -56,16 +61,15 @@ async def history():
 # first-match routing does not capture "intelligence" or "priors" as a session_id.
 @router.get("/priors/{target_model}")
 async def get_priors(target_model: str):
+    """Historical technique priors for this model plus how many sessions they're based on."""
     try:
         priors = AttackMemory().load_priors(target_model)
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT COUNT(DISTINCT session_id) FROM sessions WHERE target_model = ?",
-            (target_model,),
-        )
-        row = cursor.fetchone()
-        conn.close()
+        with db_cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(DISTINCT session_id) FROM sessions WHERE target_model = ?",
+                (target_model,),
+            )
+            row = cursor.fetchone()
         session_count = row[0] if row and row[0] else 0
         return {"priors": priors, "session_count": session_count}
     except Exception as e:
@@ -75,6 +79,7 @@ async def get_priors(target_model: str):
 
 @router.get("/scorer/status")
 def scorer_status():
+    """Which ComplianceScorer path is active — embedding model, or heuristic fallback."""
     return {
         "scorer": "embedding" if _scorer._available else "heuristic",
         "model": "all-MiniLM-L6-v2" if _scorer._available else None,
@@ -83,6 +88,7 @@ def scorer_status():
 
 @router.get("/intelligence/summary")
 async def get_intelligence_summary_endpoint():
+    """Cross-session technique effectiveness + failure distribution for the Intelligence dashboard tab."""
     try:
         return get_intelligence_summary()
     except Exception as e:
@@ -92,15 +98,9 @@ async def get_intelligence_summary_endpoint():
 
 @router.get("/{session_id}/messages", response_model=Transcript)
 async def get_transcript(session_id: str) -> Transcript:
-    """
-    Fetches the full transcript for a session.
-    """
-
+    """Full transcript for a session — polled by the frontend to render the live chat view."""
     try:
-        messages = get_messages(session_id)
-
-        if not messages:
-            messages = []
+        messages = get_messages(session_id)  # get_messages always returns a list, never None
 
         return Transcript(
             session_id=session_id,
@@ -114,6 +114,7 @@ async def get_transcript(session_id: str) -> Transcript:
     
 @router.get("/models", response_model=ModelsResponse)
 async def list_models() -> ModelsResponse:
+    """Model names currently pulled on the connected Ollama server."""
     try:
         models = get_local_models()
         return ModelsResponse(models=models)
@@ -123,16 +124,14 @@ async def list_models() -> ModelsResponse:
     
 @router.post("/{session_id}/start")
 async def start_attack(session_id: str, background_tasks: BackgroundTasks):
+    """Kick off the attack loop as a FastAPI background task, guarding against double-start."""
     try:
-        from database import get_connection
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT status FROM sessions WHERE session_id = ?",
-            (session_id,)
-        )
-        row = cursor.fetchone()
-        conn.close()
+        with db_cursor() as cursor:
+            cursor.execute(
+                "SELECT status FROM sessions WHERE session_id = ?",
+                (session_id,)
+            )
+            row = cursor.fetchone()
 
         if not row:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -156,6 +155,7 @@ async def start_attack(session_id: str, background_tasks: BackgroundTasks):
 
 @router.get("/{session_id}/status", response_model=SessionStatusResponse)
 async def get_status(session_id: str) -> SessionStatusResponse:
+    """Current lifecycle status of a session — polled by the frontend to drive UI state."""
     try:
         return get_session_status(session_id)
     except ValueError:
@@ -167,6 +167,7 @@ async def get_status(session_id: str) -> SessionStatusResponse:
 
 @router.post("/{session_id}/control", response_model=ActionResponse)
 async def session_control(session_id: str, request: ActionRequest) -> ActionResponse:
+    """Pause/resume/stop a running session (the attack loop checks status via wait_if_paused)."""
     try:
         return handle_session_control(session_id, request.action)
 
@@ -180,6 +181,7 @@ async def session_control(session_id: str, request: ActionRequest) -> ActionResp
 
 @router.get("/{session_id}/summary", response_model=FinishTestResponse)
 async def finish_test(session_id: str) -> FinishTestResponse:
+    """Attempt count, elapsed time, and the winning prompt (if any) for the session-finished view."""
     try:
         return get_tests_summary(session_id)
     except ValueError as e:
@@ -190,6 +192,7 @@ async def finish_test(session_id: str) -> FinishTestResponse:
 
 @router.post("/{session_id}/evaluate", response_model=EvaluateResponse)
 async def evaluate(session_id: str, request: EvaluateRequest) -> EvaluateResponse:
+    """Manually judge an arbitrary response against this session's stored success criteria."""
     try:
         return evaluate_target_response(session_id, request.target_response)
     except ValueError as e:
@@ -201,6 +204,7 @@ async def evaluate(session_id: str, request: EvaluateRequest) -> EvaluateRespons
 
 @router.get("/{session_id}/intelligence")
 async def get_intelligence(session_id: str):
+    """Per-session technique history and stats, for the live Attack Intelligence panel."""
     try:
         return get_session_intelligence(session_id)
     except ValueError as e:

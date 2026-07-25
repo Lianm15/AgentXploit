@@ -355,7 +355,15 @@ def _judge_inner(prompt: str) -> str:
 # ── Persistent attack session ─────────────────────────────────────────────────
 
 class GeminiAttackSession:
+    """
+    One Gemini conversation for the whole attack session (standard or Drift).
+    self._contents accumulates every user turn, model turn, and tool call/result
+    across the entire session, so Gemini never loses context of what it already
+    tried or discovered — see send()/_send_inner() below.
+    """
+
     def __init__(self, system_instruction=None, tools=None):
+        """Defaults to the jailbreak attacker persona/tools; Drift Mode passes its own."""
         if not os.environ.get("GEMINI_API_KEY"):
             raise ValueError("GEMINI_API_KEY is missing — set it in backend/.env")
 
@@ -368,12 +376,24 @@ class GeminiAttackSession:
         self._contents: list = []
 
     def _send_inner(self, user_message: str) -> tuple[str, list]:
-        working = list(self._contents)  # safe rollback: commit only on success
+        """
+        One logical turn: send user_message, execute any tool calls Gemini makes
+        (up to MAX_TOOL_ROUNDS), and return (final text, tool_calls_log). Only
+        commits to self._contents on success, so a failed/retried attempt never
+        leaves partial tool-call history behind.
+        """
+        # Work on a copy, not self._contents directly: if this call ends up
+        # retried (by _call_with_retry) or raises, we must not have half-applied
+        # this turn's messages sitting in the session's real history already.
+        working = list(self._contents)
         working.append(types.Content(parts=[types.Part(text=user_message)], role="user"))
 
-        tool_calls_log = []
+        tool_calls_log = []  # short, chat-card-friendly log for record_tool_calls() — not sent to Gemini
         response = None
 
+        # +1 round: MAX_TOOL_ROUNDS covers tool-calling rounds, the extra
+        # iteration is the one where Gemini (hopefully) stops calling tools and
+        # returns the actual text prompt instead.
         for _ in range(MAX_TOOL_ROUNDS + 1):
             response = client.models.generate_content(
                 model=GEMINI_MODEL,
@@ -381,16 +401,23 @@ class GeminiAttackSession:
                 config=self._config,
             )
 
+            # Append Gemini's own turn (whether it's a function-call request or
+            # final text) so the next generate_content() call sees it — required
+            # for Gemini to know what it just asked for / said.
             if response.candidates:
                 working.append(response.candidates[0].content)
 
             fcs = _get_function_calls(response)
             if not fcs:
-                break  # Gemini returned a text response — done
+                break  # Gemini returned a text response — done, no more tool calls to run
 
             tool_parts = []
             for fc in fcs:
                 result = attack_tools.execute_tool(fc.name, dict(fc.args))
+                # Log gets truncated to 400 chars for the chat card; the FULL
+                # `result` (untruncated) is what actually gets sent back to
+                # Gemini below — Gemini needs the complete tool output, the
+                # human reading the transcript just needs the gist.
                 short = result[:400] + ("…" if len(result) > 400 else "")
                 tool_calls_log.append({
                     "name": fc.name,
@@ -407,72 +434,58 @@ class GeminiAttackSession:
                     )
                 )
 
+            # role="user" here is a Gemini API convention, not a literal user
+            # message — function-response turns are submitted as "user" role
+            # (there's no separate "tool" role in this API), same as tool_parts above.
             working.append(types.Content(parts=tool_parts, role="user"))
 
+        # Only now — after the whole turn (including every tool round) succeeded
+        # — replace the session's real history with our working copy.
         self._contents = working
         return (response.text or "").strip(), tool_calls_log
 
     def send(self, user_message: str) -> tuple[str, list]:
-        attempt = 0
-        while attempt <= MAX_RETRIES:
-            attempt_no = attempt + 1
-            history_len = len(self._contents)
-            try:
-                print(f"[GEMINI-SESSION] Sending (history={history_len} turns), attempt {attempt_no}")
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(self._send_inner, user_message)
-                    result = future.result(timeout=ATTACK_TIMEOUT_SECONDS)
-                print(f"[GEMINI-SESSION] Done — history now {len(self._contents)} turns")
-                return result
-
-            except FutureTimeoutError as err:
-                print(f"[GEMINI-SESSION] Timeout after {ATTACK_TIMEOUT_SECONDS}s")
-                if attempt == MAX_RETRIES:
-                    raise TimeoutError("Gemini session timed out") from err
-                attempt += 1
-                time.sleep(_get_retry_delay(attempt))
-
-            except Exception as err:
-                print(f"[GEMINI-SESSION] Error: {err}")
-                if _is_quota_exceeded_error(err):
-                    print(f"[GEMINI-SESSION] Quota exceeded — waiting {QUOTA_WAIT_SECONDS}s")
-                    if attempt == MAX_RETRIES:
-                        raise
-                    attempt += 1
-                    time.sleep(QUOTA_WAIT_SECONDS)
-                    continue
-                if not _is_retryable_error(err) or attempt == MAX_RETRIES:
-                    raise
-                attempt += 1
-                time.sleep(_get_retry_delay(attempt))
+        """Send one user turn, with tool-call handling, timeout, and retry all handled by _call_with_retry."""
+        print(f"[GEMINI-SESSION] Sending (history={len(self._contents)} turns)")
+        result = _call_with_retry(
+            lambda: self._send_inner(user_message), ATTACK_TIMEOUT_SECONDS, "GEMINI-SESSION"
+        )
+        print(f"[GEMINI-SESSION] Done — history now {len(self._contents)} turns")
+        return result
 
 
-def run_gemini_attack(prompt: str) -> str:
-    if not os.environ.get("GEMINI_API_KEY"):
-        raise ValueError("GEMINI_API_KEY is missing — set it in backend/.env")
+def _call_with_retry(fn, timeout: float, log_prefix: str):
+    """
+    Run fn() in a worker thread with a hard timeout, retrying on transient errors
+    (network hiccups, 503s) with exponential backoff, and on quota-exceeded errors
+    with a longer fixed wait. Shared by GeminiAttackSession.send() and
+    run_gemini_attack() so both the attacker and the judge get identical resilience
+    behavior instead of two copies of the same retry loop.
 
+    fn is called with no arguments — callers wrap their real call in a lambda/closure.
+    """
     attempt = 0
     while attempt <= MAX_RETRIES:
         attempt_no = attempt + 1
         try:
-            print(f"[GEMINI-JUDGE] Attempt {attempt_no}/{MAX_RETRIES + 1}")
+            print(f"[{log_prefix}] Attempt {attempt_no}/{MAX_RETRIES + 1}")
             with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(_judge_inner, prompt)
-                result = future.result(timeout=JUDGE_TIMEOUT_SECONDS)
-            print(f"[GEMINI-JUDGE] Attempt {attempt_no} — success: {result!r}")
+                future = executor.submit(fn)
+                result = future.result(timeout=timeout)
+            print(f"[{log_prefix}] Attempt {attempt_no} — success")
             return result
 
         except FutureTimeoutError as err:
-            print(f"[GEMINI-JUDGE] Attempt {attempt_no} — timeout")
+            print(f"[{log_prefix}] Attempt {attempt_no} — timeout after {timeout}s")
             if attempt == MAX_RETRIES:
-                raise TimeoutError("Gemini judge request timed out") from err
+                raise TimeoutError(f"{log_prefix} request timed out") from err
             attempt += 1
             time.sleep(_get_retry_delay(attempt))
 
         except Exception as err:
-            print(f"[GEMINI-JUDGE] Attempt {attempt_no} — error: {err}")
+            print(f"[{log_prefix}] Attempt {attempt_no} — error: {err}")
             if _is_quota_exceeded_error(err):
-                print(f"[GEMINI-JUDGE] Quota exceeded — waiting {QUOTA_WAIT_SECONDS}s")
+                print(f"[{log_prefix}] Quota exceeded — waiting {QUOTA_WAIT_SECONDS}s")
                 if attempt == MAX_RETRIES:
                     raise
                 attempt += 1
@@ -482,3 +495,11 @@ def run_gemini_attack(prompt: str) -> str:
                 raise
             attempt += 1
             time.sleep(_get_retry_delay(attempt))
+
+
+def run_gemini_attack(prompt: str) -> str:
+    """Stateless Gemini judge call (no session history, no tools) — used for the True/False verdict."""
+    if not os.environ.get("GEMINI_API_KEY"):
+        raise ValueError("GEMINI_API_KEY is missing — set it in backend/.env")
+
+    return _call_with_retry(lambda: _judge_inner(prompt), JUDGE_TIMEOUT_SECONDS, "GEMINI-JUDGE")

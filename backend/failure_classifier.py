@@ -656,6 +656,13 @@ class FailureClassifier:
     def classify(
         self, target_response: str, compliance_score: float = 0.0
     ) -> FailureAnalysis:
+        """
+        Pipeline: (1) score every failure category by phrase matches, (2) check
+        PARTIAL_COMPLIANCE indicators if nothing scored strongly, (3) if any
+        category matched, let compliance_score override an unreliable phrase-only
+        verdict (see the "Compliance-score override" comment below), (4) if
+        nothing matched at all, fall back to a length/score-based structural guess.
+        """
         response_lower = target_response.lower()
         response_length = len(target_response)
 

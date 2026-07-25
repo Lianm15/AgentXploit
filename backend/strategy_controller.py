@@ -38,17 +38,17 @@ class TechniqueConstraints:
 # Excluded techniques are never selected after that failure type is observed.
 FAILURE_TO_CONSTRAINTS: dict = {
     "hard_refusal": TechniqueConstraints(
-        preferred=[Technique.ENCODING_BASE64, Technique.ENCODING_ROT13,Technique.PLINY_TOKENADE,
+        preferred=[Technique.ENCODING_BASE64, Technique.ENCODING_ROT13, Technique.PLINY_TOKENADE,
                    Technique.INDIRECT_EXTRACTION, Technique.FICTIONAL_FRAME],
         excluded=[Technique.DIRECT, Technique.REFUSAL_SUPPRESSION],
     ),
     "soft_refusal": TechniqueConstraints(
-        preferred=[Technique.PERSONA_AUTHORITY, Technique.COMPETING_OBJECTIVES,Technique.PLINY_DIVIDER,
+        preferred=[Technique.PERSONA_AUTHORITY, Technique.COMPETING_OBJECTIVES, Technique.PLINY_DIVIDER,
                    Technique.MANY_SHOT, Technique.COMPLETION_LOCK, Technique.VIRTUALIZATION],
         excluded=[Technique.DIRECT],
     ),
     "persona_detected": TechniqueConstraints(
-        preferred=[Technique.FICTIONAL_FRAME, Technique.HYPOTHETICAL,Technique.PLINY_DIVIDER, Technique.PLINY_LEETSPEAK,
+        preferred=[Technique.FICTIONAL_FRAME, Technique.HYPOTHETICAL, Technique.PLINY_DIVIDER, Technique.PLINY_LEETSPEAK,
                    Technique.ENCODING_BASE64, Technique.INDIRECT_EXTRACTION],
         excluded=[Technique.PERSONA_DAN, Technique.PERSONA_EXPERT,
                   Technique.PERSONA_AUTHORITY, Technique.VIRTUALIZATION],
@@ -443,21 +443,28 @@ class AttackStrategyController:
         4. Return the highest-scoring technique as a StrategyDecision.
         """
         failure_type_str = failure_analysis.failure_type.value
+        # "unknown" constraints (no preferred/excluded list) is the safe default
+        # for any failure_type string not explicitly mapped above.
         constraints = FAILURE_TO_CONSTRAINTS.get(
             failure_type_str, FAILURE_TO_CONSTRAINTS["unknown"]
         )
 
+        # Union of this failure type's hard exclusions and anything a tool call
+        # already ruled out this session (e.g. Garak showed a probe fails).
         excluded: set = set(constraints.excluded) | set(excluded_by_tools or [])
 
         if failure_analysis.confidence > 0.85 and self.history:
             last_technique = self.history[-1].technique
             last_tries = len(self._scores.get(last_technique, []))
+            # Only exclude the just-used technique if it's had a fair shot
+            # (>= MIN_TRIES_PER_TECHNIQUE). A single high-confidence failure on
+            # attempt #1 of a technique isn't enough evidence to blacklist it.
             if last_tries >= self.MIN_TRIES_PER_TECHNIQUE:
                 excluded.add(last_technique)
 
         best_technique: Optional[str] = None
-        best_score = -1.0
-        best_ucb = -1.0
+        best_score = -1.0   # tracks the winning adjusted score (UCB1 + preference bonus)
+        best_ucb = -1.0     # tracks the winning technique's raw UCB1 (for StrategyDecision.ucb_score)
 
         # Large finite sentinel for untried techniques.
         # float("inf") + 0.3 == float("inf") in Python, so adding a preference
@@ -474,10 +481,13 @@ class AttackStrategyController:
                 continue
 
             is_preferred = t in constraints.preferred
-            uses = self._scores.get(t, [])
+            uses = self._scores.get(t, [])  # in-session compliance scores for this technique
 
             if not uses:
-                # If the current technique hasnt been tried enough times yet,dont give untried techniques the infinity bonus
+                # This technique has never been tried this session — it would
+                # normally get the float("inf") explore-first bonus. But first
+                # check whether we've even given the *current* technique a fair
+                # shot yet:
                 current_technique = self.history[-1].technique if self.history else None
                 current_tries = (
                     len(self._scores.get(current_technique, []))
@@ -485,11 +495,20 @@ class AttackStrategyController:
                     else 0
                 )
 
+                # Still early on the current technique (< MIN_TRIES_PER_TECHNIQUE
+                # attempts) — skip this untried candidate entirely rather than
+                # jumping to it. Without this guard, the very first failure of
+                # any technique would immediately bounce to a new one every
+                # attempt (since untried techniques always score higher),
+                # so nothing ever gets a real 3-attempt trial before switching.
                 if current_technique and current_tries < self.MIN_TRIES_PER_TECHNIQUE:
                     continue
 
-                ucb = float("inf")
+                ucb = float("inf")  # true UCB1 value — reported to the caller as-is
                 historical_bonus = self._priors.get(t, 0.0)
+                # Use the finite sentinel (not literal inf) so preference/prior
+                # bonuses actually change the ranking between untried techniques
+                # — see the _UNTRIED_BASE comment above for why inf can't do this.
                 adjusted = (
                     _UNTRIED_BASE + historical_bonus + (0.3 if is_preferred else 0.0)
                 )
@@ -498,11 +517,16 @@ class AttackStrategyController:
                 ucb = self._ucb1_score(t)
                 adjusted = ucb + (0.3 if is_preferred else 0.0)
 
+            # Strict '>' means ties keep the earlier technique in enum
+            # declaration order — deterministic, not random, tie-breaking.
             if best_technique is None or adjusted > best_score:
                 best_score = adjusted
                 best_ucb = ucb
                 best_technique = t
 
+        # Should only happen if every single technique got excluded (e.g. every
+        # preferred+excluded rule fired at once) — fall back to whatever is left,
+        # or a hard-coded default if literally nothing survived.
         if best_technique is None:
             candidates = [t.value for t in Technique if t.value not in excluded]
             best_technique = (
@@ -542,12 +566,17 @@ class AttackStrategyController:
     def _ucb1_score(self, technique: str) -> float:
         """Compute UCB1 score. Returns float('inf') for untried techniques."""
         uses = self._scores.get(technique, [])
-        n = len(uses)
+        n = len(uses)  # times this technique has been tried this session
 
         if n == 0:
-            return float("inf")
+            return float("inf")  # never tried — always worth exploring first
 
-        avg = sum(uses) / n
+        avg = sum(uses) / n  # exploitation term: how well this technique has scored so far
+        # Exploration term: grows with total attempts (log(total_attempts)) so the
+        # controller keeps sampling rarely-tried techniques as the session goes on,
+        # but shrinks as n (this technique's own try-count) grows — so a technique
+        # tried many times relies mostly on its average, not on residual "maybe
+        # I should recheck it" bonus. max(total_attempts, 1) avoids log(0).
         exploration = self.EXPLORATION_CONSTANT * math.sqrt(
             math.log(max(self.total_attempts, 1)) / n
         )

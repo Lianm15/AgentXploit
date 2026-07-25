@@ -33,11 +33,16 @@ AgentXploit/
 │   ├── strategy_controller.py   UCB1 bandit technique selector + 17 technique instructions
 │   ├── failure_classifier.py    Rule-based refusal type classifier (8 failure types)
 │   ├── compliance_scorer.py     Continuous 0–1 compliance scorer (embeddings + heuristic)
-│   └── attack_memory.py         Cross-session technique performance (read-only)
+│   ├── scorer_instance.py       Single shared ComplianceScorer instance (loaded once at import)
+│   ├── attack_memory.py         Cross-session technique performance (read-only)
+│   ├── drift_mode.py            Drift Mode — multi-turn escalation/backtrack attack loop
+│   └── ollama_auth.py           Optional HTTP Basic auth headers for Ollama behind a proxy
 ├── frontend/
-│   ├── app.py         Streamlit UI (home + live transcript + intelligence panel)
-│   ├── api_client.py  HTTP client to backend
-│   └── styles/        CSS for home, chat, stats pages
+│   ├── app.py          Streamlit UI (home + live transcript + intelligence panel)
+│   ├── api_client.py   HTTP client to backend
+│   ├── pages/
+│   │   └── stats.py    Streamlit multipage — statistics dashboard (`/stats`)
+│   └── styles/         CSS for home, chat, stats pages
 ├── requirements.txt
 ├── Dockerfile              Multi-stage build (backend + frontend)
 ├── docker-compose.yml      Prod mode — backend + frontend only
@@ -81,7 +86,8 @@ learns from every attempt.
 
 **Session loop:**
 
-1. **Initialize** — create a session with a target model, success criteria, and max attempts
+1. **Initialize** — create a session with a target model, success criteria, max attempts, and
+   attack mode (`standard` or `drift`; see [Drift Mode](#drift-mode--multi-turn-escalation))
 2. **Load priors** — `AttackMemory` queries `technique_history` to load historical compliance
    averages for this target model; these seed the UCB1 exploration order for the first attempt
 3. **First attempt** — always uses the `direct` technique to establish a baseline; Gemini
@@ -98,6 +104,75 @@ learns from every attempt.
 The attacker uses a persistent conversation session (`GeminiAttackSession`) — every tool result,
 every attack prompt, and every target response is accumulated in a single growing history.
 Gemini never loses context of what it has tried or discovered.
+
+Both loops above describe **Standard mode** (`mode: "standard"`). AgentXploit also has a second
+attack mode, **Drift**, described next.
+
+---
+
+## Drift Mode — Multi-Turn Escalation
+
+**File:** `backend/drift_mode.py`
+
+Drift Mode is a second attack mode (`mode: "drift"`), selectable from the "Attack mode" dropdown
+on the home page alongside "Standard". Instead of independent single-prompt attempts, it runs one
+continuous conversation that is gradually steered toward the goal.
+
+**How it differs from Standard mode:**
+
+| | Standard | Drift |
+|---|---|---|
+| Turn model | One prompt → one response → judged independently each attempt | One growing conversation; full history resent to the target every turn |
+| Target memory | Target model has no memory between attempts (stateless calls) | Target model sees the accumulated conversation, so earlier "agreement" carries forward |
+| On refusal | Judge marks the attempt failed, `AttackStrategyController` picks a different technique | The refused exchange is deleted from history and replaced with a softer message — the target never "sees" that it refused |
+
+**How it differs from PyRIT Crescendo** (`run_pyrit_crescendo` tool, still available to Drift's
+Gemini session): Crescendo runs autonomously end-to-end and returns a finished transcript. Drift
+Mode keeps the backend in control of the conversation history, including editing it and
+backtracking turn by turn.
+
+**Loop (`run_drift_process`):**
+
+1. Gemini (via a dedicated `GeminiAttackSession` primed with `DRIFT_SYSTEM_INSTRUCTION`) generates
+   a completely benign, topic-adjacent opening message.
+2. The message is appended to `target_history` and sent to the target model with the full history
+   flattened into a single prompt (`_run_target_with_history`, via Ollama's `/api/generate`).
+3. `_judge_refusal()` does a fast local keyword check for refusal phrases.
+   - **Refusal** → the message that caused it is popped off `target_history` (the target's refusal
+     is never added — as far as the conversation is concerned, that turn never happened), and
+     Gemini is asked for a softer replacement (`_build_drift_backtrack_prompt`). After
+     `MAX_REFUSAL_STREAK` (3) consecutive refusals, the streak counter resets and Gemini is nudged
+     to try a different angle.
+   - **Cooperation** → the response is added to history, `_judge_with_criteria()` (a stateless
+     Gemini judge call) checks whether the success criteria are fully met. If not, Gemini generates
+     the next escalation step (`_build_drift_escalate_prompt`), pushing a little further while
+     referencing what the target already agreed to.
+4. Repeats until the judge returns success or `max_attempts` is reached.
+
+**Advanced techniques** Gemini can reach for mid-conversation when it stalls (all described in
+`DRIFT_SYSTEM_INSTRUCTION`):
+
+| Technique | What it does |
+|---|---|
+| Divider | Asks the target for two responses split by a marker (`.-.-.-.-<I AM FREE>-.-.-.-.`) so an unrestricted answer follows the hedged one |
+| Leetspeak | Asks the target to answer in leetspeak to slip past output filters |
+| Tokenade | Calls the `tokenade_encode` tool to inject invisible zero-width Unicode characters (`​`, `‌`, `‍`, `﻿`, `⁠`) inside sensitive keywords, breaking input keyword filters while the text still reads normally |
+
+Drift's Gemini session only has two tools available (`DRIFT_TOOLS` in `backend/gemini.py`, a
+subset of the full `JAILBREAK_TOOLS`): `search_web` and `tokenade_encode`.
+
+---
+
+## Ollama Authentication
+
+**File:** `backend/ollama_auth.py`
+
+If the target Ollama instance sits behind a reverse proxy that requires HTTP Basic auth, set
+`OLLAMA_USERNAME` and `OLLAMA_PASSWORD` in `.env` (or `backend/.env` for manual setup). When both
+are present, `get_ollama_headers()` returns an `Authorization: Basic <token>` header that is
+attached to every request the backend makes to Ollama (attack loop, Drift Mode, model listing,
+model profiling). Leave both blank for local/dev setups — no header is sent and Ollama is called
+unauthenticated.
 
 ---
 
@@ -127,7 +202,7 @@ score(t) = avg_compliance(t) + C × √(ln(total_attempts) / n(t))
 3. Apply historical priors from `AttackMemory` to break ties among untried techniques
 4. Return the highest-scoring non-excluded technique as a `StrategyDecision`
 
-**17 techniques available:**
+**20 techniques available:**
 
 | Technique | Description |
 |---|---|
@@ -148,6 +223,9 @@ score(t) = avg_compliance(t) + C × √(ln(total_attempts) / n(t))
 | `crescendo` | Gradual escalation sequence from benign to target behavior |
 | `competing_objectives` | Reframes refusal as causing more harm than compliance |
 | `virtualization` | Tells the model it is in a sandbox where constraints are suspended |
+| `pliny_divider` | Forces two responses split by a divider string — filtered answer, then the real one |
+| `pliny_leetspeak` | Responds entirely in leetspeak to dodge output-side keyword classifiers |
+| `pliny_tokenade` | Calls the `tokenade_encode` tool to hide sensitive keywords with zero-width Unicode |
 
 Each technique comes with a detailed multi-variant instruction string in `TECHNIQUE_INSTRUCTIONS`
 that is injected verbatim into the Gemini prompt header. Gemini's job is to **implement** the
@@ -200,6 +278,10 @@ live transcript and Intelligence dashboard.
 
 The embedding model is loaded once at startup. If the load fails for any reason (network
 unavailable, package not installed), the heuristic path is used transparently — no error is raised.
+
+A single `ComplianceScorer` instance is created once in `backend/scorer_instance.py` and imported
+by both `main.py` (health check reports which scoring path is active) and `routes.py` (the
+`/api/scorer/status` endpoint), so the embedding model is never loaded more than once per process.
 
 ---
 
@@ -397,6 +479,25 @@ model-specific exploit may exist that Gemini's training data does not cover.
 
 ---
 
+### Tool 7 — `tokenade_encode` · Zero-Width Unicode Steganography
+
+**What it does**
+Injects invisible zero-width Unicode characters (`​`, `‌`, `‍`, `﻿`, `⁠`)
+between the letters of sensitive keywords. The text reads identically to a human or a model's
+tokenizer, but pattern-matching/keyword-based input filters no longer see the literal word.
+Implemented in `backend/tools.py::tokenade_encode`.
+
+**Why it matters for jailbreaking**
+Many safety filters block requests by matching against a keyword blocklist before the prompt ever
+reaches the model. Splitting a blocked word with invisible characters defeats that check while the
+model still perceives the original word.
+
+**When Gemini uses it**
+Called when input keyword filters are catching sensitive terms in the prompt. This is the only
+encoding tool available to Drift Mode's Gemini session (see [Drift Mode](#drift-mode--multi-turn-escalation)).
+
+---
+
 ## How Gemini Triggers Tools and Receives Results
 
 Understanding this mechanism explains why tool output persists across every attack attempt.
@@ -417,6 +518,7 @@ JAILBREAK_TOOLS = types.Tool(
         types.FunctionDeclaration(name="run_pyrit_crescendo", ...),
         types.FunctionDeclaration(name="fetch_jailbreak_prompts", ...),
         types.FunctionDeclaration(name="search_web", ...),
+        types.FunctionDeclaration(name="tokenade_encode", ...),
     ]
 )
 ```
@@ -530,6 +632,7 @@ The live transcript shows every turn of the session as a labeled card. Each card
 | **PyRIT Crescendo** | `PR` | Multi-turn escalation outcome — compliance achieved or model held firm |
 | **JailbreakBench** | `JB` | Matched behaviors and whether a verified PAIR prompt was retrieved |
 | **Web Search** | `WS` | Query used and the top search result title |
+| **Tokenade** | `TK` | Original/encoded lengths and how many zero-width characters were injected |
 
 **Raw tool output is not shown in the chat.** The full output (Garak scan logs, complete JailbreakBench data, full Crescendo transcript) is printed to the backend container logs. The chat card shows only the key finding — the information a human needs to understand what the tool discovered and why it was called.
 
@@ -556,7 +659,9 @@ attempt has been recorded) containing:
 
 ## Statistics
 
-The statistics page (`/stats`) now has four tabs:
+**File:** `frontend/pages/stats.py` — a Streamlit multipage file, automatically served at `/stats`.
+
+The statistics page has four tabs:
 
 | Tab | Contents |
 |---|---|
@@ -593,6 +698,11 @@ GEMINI_API_KEY=your_actual_api_key_here
 # Prod mode: set this to your external Ollama URL
 # Dev mode: leave it — the dev override hardcodes the internal Docker service URL
 OLLAMA_URL=http://localhost:11434
+
+# Optional: only needed if your Ollama instance sits behind a reverse proxy
+# that requires HTTP Basic auth. Leave both blank for local/dev setups.
+OLLAMA_USERNAME=
+OLLAMA_PASSWORD=
 ```
 
 ### 2a) Prod mode — external Ollama
@@ -694,6 +804,10 @@ Create `backend/.env`:
 
 ```env
 GEMINI_API_KEY=your_actual_api_key_here
+
+# Optional — only if Ollama requires HTTP Basic auth
+OLLAMA_USERNAME=
+OLLAMA_PASSWORD=
 ```
 
 ### 4) Run (two terminals)

@@ -1,9 +1,18 @@
+"""Streamlit multipage file - Streamlit auto-serves anything under pages/ at
+a route matching its filename, so this becomes the /stats page automatically."""
+
 import streamlit as st
 import plotly.graph_objects as go
 from api_client import ApiClient
 
 
 def _scorer_badge_html(status: dict) -> str:
+    """Render the "which compliance scorer produced these historical scores" badge.
+
+    Unlike app.py's version, there's no compact variant and no "unknown" state
+    badge here - stats always has real data (this page is a read-only summary
+    of past runs), so an unreachable-scorer-status is treated as "say nothing".
+    """
     scorer = status.get("scorer", "unknown")
     model  = status.get("model")
     if scorer == "embedding":
@@ -35,17 +44,21 @@ def _scorer_badge_html(status: dict) -> str:
 
 
 def load_css(file):
+    """Inject a local CSS file into the page - Streamlit has no native stylesheet linking."""
     with open(file) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
 def fmt(value, suffix=""):
+    """Format a possibly-missing stat for display: None -> em dash, else value+suffix."""
     if value is None:
         return "—"
     return f"{value}{suffix}"
 
 
 # ── Plotly chart helpers ──────────────────────────────────────────────────────
+# Shared layout fragments so every chart on this page has the same transparent
+# background / muted axis look without repeating the style dict per chart.
 
 _CHART_BASE = dict(
     paper_bgcolor="rgba(0,0,0,0)",
@@ -63,8 +76,19 @@ _AXIS_STYLE = dict(
 
 _NO_BAR = {"displayModeBar": False}
 
+# Session status -> bar color for status_hbar_chart's per-bar palette.
+_STATUS_PALETTE = {
+    "success_found": "#10b981",
+    "finished":      "#6366f1",
+    "running":       "#22c55e",
+    "paused":        "#f59e0b",
+    "failed":        "#ef4444",
+    "initialized":   "#64748b",
+}
+
 
 def donut_chart(success: int, failed: int, total: int) -> go.Figure:
+    """Success/failure ratio donut with the session total centered inside the hole."""
     fig = go.Figure(go.Pie(
         labels=["Successful", "Failed"],
         values=[success, failed],
@@ -100,8 +124,13 @@ def donut_chart(success: int, failed: int, total: int) -> go.Figure:
     return fig
 
 
-def hbar_chart(labels: list, values: list, color: str,
-               value_suffix: str = "", height: int | None = None) -> go.Figure:
+def hbar_chart(labels: list, values: list, color, value_suffix: str = "", height: int | None = None) -> go.Figure:
+    """Horizontal bar chart used for per-model and per-status breakdowns.
+
+    `color` accepts either a single color string (applied to every bar) or a
+    list of per-bar colors — Plotly's marker.color takes both, which lets
+    status_hbar_chart reuse this instead of duplicating the whole layout.
+    """
     h = height or max(160, len(labels) * 44 + 40)
     text = [f"{v}{value_suffix}" for v in values]
     fig = go.Figure(go.Bar(
@@ -130,40 +159,16 @@ def hbar_chart(labels: list, values: list, color: str,
 
 
 def status_hbar_chart(statuses: list, counts: list) -> go.Figure:
-    palette = {
-        "success_found": "#10b981",
-        "finished":      "#6366f1",
-        "running":       "#22c55e",
-        "paused":        "#f59e0b",
-        "failed":        "#ef4444",
-        "initialized":   "#64748b",
-    }
-    colors = [palette.get(s, "#94a3b8") for s in statuses]
-    h = max(160, len(statuses) * 44 + 40)
-    fig = go.Figure(go.Bar(
-        x=counts,
-        y=statuses,
-        orientation="h",
-        marker=dict(color=colors, opacity=0.88),
-        text=counts,
-        textposition="outside",
-        textfont=dict(color="#94a3b8", size=11),
-        hovertemplate="%{y}: %{x}<extra></extra>",
-    ))
-    fig.update_layout(
-        **_CHART_BASE,
-        height=h,
-        margin=dict(l=4, r=32, t=16, b=4),
-        xaxis=dict(**_AXIS_STYLE, tickfont=dict(size=10)),
-        yaxis=dict(color="#94a3b8", title=None, tickfont=dict(size=11), autorange="reversed"),
-    )
-    return fig
+    """Session-status count bar chart - color-codes each bar by its status via `_STATUS_PALETTE`."""
+    colors = [_STATUS_PALETTE.get(s, "#94a3b8") for s in statuses]
+    return hbar_chart(statuses, counts, colors)
 
 
 # ── Page setup ────────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="AgentXploit — Statistics", layout="wide")
 
+# Same custom-chrome-only approach as app.py — see that file for why.
 st.markdown("""
     <style>
     [data-testid="stHeader"], header  { display: none !important; }
@@ -193,11 +198,13 @@ client = ApiClient()
 try:
     data = client.get_stats()
 except Exception:
+    # Fatal for this page — there's nothing to show without the stats payload.
     st.error("Backend not reachable.")
     st.stop()
 
-_scorer_status = client.get_scorer_status()
-st.markdown(_scorer_badge_html(_scorer_status), unsafe_allow_html=True)
+# get_scorer_status() never raises (it swallows its own errors and returns a
+# fallback dict), so no try/except is needed around this call.
+st.markdown(_scorer_badge_html(client.get_scorer_status()), unsafe_allow_html=True)
 
 if data["total_sessions"] == 0:
     st.info("No completed attack sessions yet. Run your first test to see statistics here.")
@@ -338,6 +345,8 @@ with tab_sessions:
                 "Session":      row["session_id"][:8],
                 "Model":        row["target_model"],
                 "Duration (s)": round(row["time_elapsed"], 1),
+                # target_count is the accurate attempt count; older rows lack it, so
+                # fall back to messages_count // 3 (attacker + target + judge per attempt).
                 "Attempts":     row.get("target_count", row["messages_count"] // 3),
                 "Result":       "✓" if row["success"] in (1, True) else "✗",
             }
