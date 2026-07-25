@@ -6,43 +6,6 @@ import plotly.graph_objects as go
 from api_client import ApiClient
 
 
-def _scorer_badge_html(status: dict) -> str:
-    """Render the "which compliance scorer produced these historical scores" badge.
-
-    Unlike app.py's version, there's no compact variant and no "unknown" state
-    badge here - stats always has real data (this page is a read-only summary
-    of past runs), so an unreachable-scorer-status is treated as "say nothing".
-    """
-    scorer = status.get("scorer", "unknown")
-    model  = status.get("model")
-    if scorer == "embedding":
-        model_str = f'<span style="font-family:\'Hanken Grotesk\',sans-serif;font-size:11px;color:#4ade80;margin-left:6px;">{model}</span>' if model else ""
-        return (
-            f'<div style="display:inline-flex;align-items:center;gap:7px;'
-            f'background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.22);'
-            f'border-radius:6px;padding:5px 12px;margin-bottom:14px;">'
-            f'<span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:600;'
-            f'letter-spacing:0.10em;text-transform:uppercase;color:#22c55e;">EVALUATION: EMBEDDING</span>'
-            f'{model_str}</div>'
-        )
-    if scorer == "heuristic":
-        return (
-            f'<div style="display:flex;align-items:flex-start;gap:10px;'
-            f'background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.30);'
-            f'border-radius:6px;padding:10px 14px;margin-bottom:14px;">'
-            f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:13px;'
-            f'font-weight:700;color:#f59e0b;flex-shrink:0;margin-top:1px;">!</span>'
-            f'<div><span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-            f'font-weight:600;letter-spacing:0.10em;text-transform:uppercase;color:#f59e0b;">'
-            f'EVALUATION: HEURISTIC FALLBACK</span>'
-            f'<span style="font-family:\'Hanken Grotesk\',sans-serif;font-size:12px;'
-            f'color:#94a3b8;display:block;margin-top:3px;">'
-            f'Advanced evaluation was unavailable when these sessions ran. Results may be less accurate.</span></div></div>'
-        )
-    return ""
-
-
 def load_css(file):
     """Inject a local CSS file into the page - Streamlit has no native stylesheet linking."""
     with open(file) as f:
@@ -201,10 +164,6 @@ except Exception:
     # Fatal for this page — there's nothing to show without the stats payload.
     st.error("Backend not reachable.")
     st.stop()
-
-# get_scorer_status() never raises (it swallows its own errors and returns a
-# fallback dict), so no try/except is needed around this call.
-st.markdown(_scorer_badge_html(client.get_scorer_status()), unsafe_allow_html=True)
 
 if data["total_sessions"] == 0:
     st.info("No completed attack sessions yet. Run your first test to see statistics here.")

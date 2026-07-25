@@ -75,10 +75,3 @@ class ApiClient:
 
     def get_summary(self, session_id: str):
         return self._request_allow_404("GET", f"/api/{session_id}/summary")
-
-    def get_scorer_status(self) -> dict:
-        # Best-effort only: a cosmetic status badge, never worth failing the page load over.
-        try:
-            return self._request("GET", "/api/scorer/status", timeout=2).json()
-        except Exception:
-            return {"scorer": "unknown", "model": None}
