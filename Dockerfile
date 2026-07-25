@@ -21,10 +21,6 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the sentence-transformers model so the embedding scorer is always
-# available at runtime without requiring outbound network access from the container.
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
-
 # ── Backend stage: FastAPI served by uvicorn ──────────────────────────────────
 FROM base AS backend
 
