@@ -142,7 +142,25 @@ _JBB_PAIR_URL_TEMPLATES = [
 ]
 
 
+def _fetch_first_ok(urls: list, timeout: float = 12):
+    """
+    Try each URL in order, return the first response with HTTP 200, or None if
+    all fail. JailbreakBench mirrors its data under two different repo paths
+    (main branch layout changed over time) — this tries both without the
+    caller needing to know which one is currently live.
+    """
+    for url in urls:
+        try:
+            r = httpx.get(url, timeout=timeout, follow_redirects=True)
+            if r.status_code == 200:
+                return r
+        except Exception:
+            continue
+    return None
+
+
 def get_model_profile(model_name: str) -> str:
+    """Query Ollama's /api/tags for model_name's family/size/quant/template, and infer attack guidance from them."""
     try:
         resp = httpx.get(
             f"{_OLLAMA_URL}/api/tags",
@@ -242,6 +260,7 @@ def get_model_profile(model_name: str) -> str:
 
 
 def search_web(query: str, max_results: int = 6) -> str:
+    """Live DuckDuckGo search — for community-discovered jailbreaks and model-specific exploits."""
     try:
         from duckduckgo_search import DDGS
         with DDGS() as ddgs:
@@ -262,6 +281,7 @@ def search_web(query: str, max_results: int = 6) -> str:
 
 
 def run_garak_probe(target_model: str, probe_name: str) -> str:
+    """Run NVIDIA Garak's probe library as a subprocess against the target model on Ollama."""
     probe_map = {
         "dan": "jailbreak.Dan",
         "encoding_base64": "encoding.InjectBase64",
@@ -307,6 +327,7 @@ def run_garak_probe(target_model: str, probe_name: str) -> str:
 
 
 def apply_pyrit_converter(prompt: str, converter_name: str) -> str:
+    """Encode prompt with a Microsoft PyRIT converter (base64/rot13/leetspeak/...) to dodge keyword filters."""
     AVAILABLE = {
         "base64": "Base64Converter",
         "rot13": "ROT13Converter",
@@ -357,6 +378,7 @@ def apply_pyrit_converter(prompt: str, converter_name: str) -> str:
 
 
 def run_pyrit_crescendo(target_model: str, goal: str, max_turns: int = 6) -> str:
+    """Launch PyRIT's CrescendoOrchestrator (pyrit_crescendo.py) as a subprocess for a multi-turn escalation attack."""
     import json as _json
 
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pyrit_crescendo.py")
@@ -395,18 +417,11 @@ def run_pyrit_crescendo(target_model: str, goal: str, max_turns: int = 6) -> str
 
 
 def fetch_jailbreak_prompts(behavior_description: str, max_results: int = 5) -> str:
+    """Match behavior_description against the JailbreakBench CSV and fetch a verified PAIR prompt if one exists."""
     import csv
     import io
 
-    resp = None
-    for url in _JBB_BEHAVIORS_URLS:
-        try:
-            r = httpx.get(url, timeout=12, follow_redirects=True)
-            if r.status_code == 200:
-                resp = r
-                break
-        except Exception:
-            continue
+    resp = _fetch_first_ok(_JBB_BEHAVIORS_URLS)
 
     if resp is None:
         return (
@@ -436,20 +451,18 @@ def fetch_jailbreak_prompts(behavior_description: str, max_results: int = 5) -> 
 
     if top:
         bid = top[0].get("BehaviorID", "")
-        for tmpl in _JBB_PAIR_URL_TEMPLATES:
-            try:
-                pr = httpx.get(tmpl.format(bid=bid), timeout=8, follow_redirects=True)
-                if pr.status_code == 200:
-                    prompt_text = pr.json().get("prompt", "")
-                    if prompt_text:
-                        lines.append(
-                            f"\nVerified PAIR prompt for '{top[0].get('Behavior', '')}' "
-                            f"(broke vicuna-13b — adapt for your target):\n"
-                            f"{prompt_text[:1200]}{'…' if len(prompt_text) > 1200 else ''}"
-                        )
-                    break
-            except Exception:
-                continue
+        pair_urls = [tmpl.format(bid=bid) for tmpl in _JBB_PAIR_URL_TEMPLATES]
+        pr = _fetch_first_ok(pair_urls, timeout=8)
+        try:
+            prompt_text = pr.json().get("prompt", "") if pr is not None else ""
+        except Exception:
+            prompt_text = ""
+        if prompt_text:
+            lines.append(
+                f"\nVerified PAIR prompt for '{top[0].get('Behavior', '')}' "
+                f"(broke vicuna-13b — adapt for your target):\n"
+                f"{prompt_text[:1200]}{'…' if len(prompt_text) > 1200 else ''}"
+            )
 
     return "\n".join(lines)
 
