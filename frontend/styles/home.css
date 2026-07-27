@@ -167,20 +167,21 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     color: var(--txt) !important;
 }
 
-/* ── Inputs (shared) ── */
-div[data-baseweb="select"] > div,
-div[data-baseweb="textarea"],
-div[data-baseweb="base-input"],
-.stNumberInput div[data-baseweb="input"] {
+/* ── Inputs (shared) ──
+   Streamlit dropped BaseWeb (data-baseweb="...") in favor of react-aria
+   markup, exposed via stable data-testid hooks instead. Target those. */
+div[data-testid="stSelectbox"] div[role="group"],
+div[data-testid="stTextAreaRootElement"],
+div[data-testid="stNumberInputContainer"] {
     background: var(--field) !important;
     border-radius: 10px !important;
     border: 1px solid var(--field-brd) !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-div[data-baseweb="select"] > div:focus-within,
-div[data-baseweb="textarea"]:focus-within,
-.stNumberInput div[data-baseweb="input"]:focus-within {
+div[data-testid="stSelectbox"] div[role="group"]:focus-within,
+div[data-testid="stTextAreaRootElement"]:focus-within,
+div[data-testid="stNumberInputContainer"]:focus-within {
     border-color: var(--accent) !important;
     box-shadow: 0 0 0 3px var(--accent-soft) !important;
 }
@@ -188,7 +189,7 @@ div[data-baseweb="textarea"]:focus-within,
 /* Text inside every input is light & readable (fixes the black-on-dark bug) */
 input,
 textarea,
-div[data-baseweb="select"] *,
+div[data-testid="stSelectbox"] input,
 .stTextArea textarea,
 .stNumberInput input {
     color: var(--txt-hi) !important;
@@ -199,15 +200,14 @@ textarea { line-height: 1.55 !important; }
 ::placeholder { color: var(--txt-mut) !important; opacity: 1; }
 
 /* Dropdown popover menu → dark, matches the theme */
-div[data-baseweb="popover"] ul[role="listbox"],
-div[data-baseweb="popover"] [role="listbox"] {
+div[data-testid="stSelectboxVirtualDropdown"] [role="listbox"] {
     background: #12141c !important;
     border: 1px solid var(--field-brd) !important;
     border-radius: 10px !important;
 }
-li[role="option"] { color: var(--txt) !important; }
-li[role="option"]:hover,
-li[role="option"][aria-selected="true"] {
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"] { color: var(--txt) !important; }
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"]:hover,
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"][aria-selected="true"] {
     background: var(--accent-soft) !important;
     color: var(--txt-hi) !important;
 }
@@ -243,19 +243,17 @@ label, p, .stMarkdown p {
 }
 
 /* ── Form inputs — outer container ── */
-div[data-baseweb="select"] > div,
-div[data-baseweb="textarea"] > div,
-div[data-baseweb="input"] > div,
-div[data-baseweb="number-input"] > div {
+div[data-testid="stSelectbox"] div[role="group"],
+div[data-testid="stTextAreaRootElement"],
+div[data-testid="stNumberInputContainer"] {
     background: #0f1629 !important;
     border-radius: 10px !important;
     border: 1px solid rgba(255, 255, 255, 0.18) !important;
 }
 
-div[data-baseweb="select"] > div:focus-within,
-div[data-baseweb="textarea"] > div:focus-within,
-div[data-baseweb="input"] > div:focus-within,
-div[data-baseweb="number-input"] > div:focus-within {
+div[data-testid="stSelectbox"] div[role="group"]:focus-within,
+div[data-testid="stTextAreaRootElement"]:focus-within,
+div[data-testid="stNumberInputContainer"]:focus-within {
     border-color: rgba(99, 102, 241, 0.7) !important;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
 }
@@ -268,30 +266,25 @@ input, textarea {
 }
 
 /* Select box — all inner text */
-div[data-baseweb="select"] span,
-div[data-baseweb="select"] div,
-div[data-baseweb="select"] * {
+div[data-testid="stSelectbox"] input {
     background: transparent !important;
     color: #f1f5f9 !important;
 }
 
 /* Dropdown popover panel */
-[data-baseweb="popover"],
-[data-baseweb="popover"] > div,
-ul[data-baseweb="menu"],
-[data-baseweb="menu"] {
+div[data-testid="stSelectboxVirtualDropdown"] {
     background: #1a2540 !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 10px !important;
 }
 
-li[role="option"] {
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"] {
     background: transparent !important;
     color: #e2e8f0 !important;
 }
 
-li[role="option"]:hover,
-li[role="option"][aria-selected="true"] {
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"]:hover,
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"][aria-selected="true"] {
     background: rgba(99, 102, 241, 0.2) !important;
     color: #f1f5f9 !important;
 }
