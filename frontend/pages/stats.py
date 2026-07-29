@@ -26,27 +26,37 @@ def fmt(value, suffix=""):
 _CHART_BASE = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(color="#94a3b8", size=12),
+    font=dict(family="Hanken Grotesk, sans-serif", color="#c5c9d3", size=12),
 )
 
 _AXIS_STYLE = dict(
     showgrid=True,
     gridcolor="rgba(255,255,255,0.07)",
     zeroline=False,
-    color="#64748b",
+    color="#6b7180",
     title=None,
 )
 
 _NO_BAR = {"displayModeBar": False}
 
+# Reused for charts with several distinct categorical bars (e.g. failure
+# types) where a single flat color makes every bar equally hard to tell
+# apart. Cycles through colors already used elsewhere in the app instead
+# of inventing new ones.
+_CATEGORY_CYCLE = ["#ffb020", "#6366f1", "#ff6b4a", "#8b5cf6", "#6b7180"]
+
 # Session status -> bar color for status_hbar_chart's per-bar palette.
+# Matches app.py's _STATUS_COLORS exactly — the live status pill is the
+# canonical source for what each status "means" colorwise, so this chart
+# should never invent its own mapping. success_found/running are genuinely
+# green there too; finished is indigo, not amber.
 _STATUS_PALETTE = {
-    "success_found": "#10b981",
+    "success_found": "#22c55e",
     "finished":      "#6366f1",
     "running":       "#22c55e",
-    "paused":        "#f59e0b",
+    "paused":        "#eab308",
     "failed":        "#ef4444",
-    "initialized":   "#64748b",
+    "initialized":   "#6b7180",
 }
 
 
@@ -57,32 +67,36 @@ def donut_chart(success: int, failed: int, total: int) -> go.Figure:
         values=[success, failed],
         hole=0.68,
         marker=dict(
-            colors=["#6366f1", "#ef4444"],
+            colors=["#ffb020", "#ef4444"],
             line=dict(color="rgba(0,0,0,0)", width=0),
         ),
         textinfo="none",
         hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
     ))
     fig.add_annotation(
-        text=f"<b style='font-size:22px;color:#f1f5f9'>{total}</b>"
-             f"<br><span style='font-size:11px;color:#64748b'>sessions</span>",
+        text=f"<b style='font-size:22px;color:#f4f5f7'>{total}</b>"
+             f"<br><span style='font-size:11px;color:#6b7180'>sessions</span>",
         x=0.5, y=0.5,
         showarrow=False,
-        font=dict(color="#f1f5f9"),
+        font=dict(color="#f4f5f7"),
     )
     fig.update_layout(
         **_CHART_BASE,
-        height=220,
+        # height and margin.b both grow by the same 30px so the plot area
+        # (height - margin.t - margin.b) stays 184px — the donut itself is
+        # pixel-identical to before. The extra 30px is pure blank space
+        # below the donut, giving the legend room to sit clear of it.
+        height=250,
         showlegend=True,
         legend=dict(
-            font=dict(color="#94a3b8", size=11),
+            font=dict(color="#c5c9d3", size=11),
             orientation="h",
             yanchor="bottom",
-            y=-0.08,
+            y=-0.25,
             xanchor="center",
             x=0.5,
         ),
-        margin=dict(l=0, r=0, t=8, b=28),
+        margin=dict(l=0, r=0, t=8, b=58),
     )
     return fig
 
@@ -103,7 +117,7 @@ def hbar_chart(labels: list, values: list, color, value_suffix: str = "", height
         marker=dict(color=color, opacity=0.88),
         text=text,
         textposition="outside",
-        textfont=dict(color="#94a3b8", size=11),
+        textfont=dict(color="#c5c9d3", size=11),
         hovertemplate="%{y}: %{x}<extra></extra>",
     ))
     fig.update_layout(
@@ -112,7 +126,7 @@ def hbar_chart(labels: list, values: list, color, value_suffix: str = "", height
         margin=dict(l=4, r=32, t=16, b=4),
         xaxis=dict(**_AXIS_STYLE, tickfont=dict(size=10)),
         yaxis=dict(
-            color="#94a3b8",
+            color="#c5c9d3",
             title=None,
             tickfont=dict(size=11),
             autorange="reversed",
@@ -123,7 +137,7 @@ def hbar_chart(labels: list, values: list, color, value_suffix: str = "", height
 
 def status_hbar_chart(statuses: list, counts: list) -> go.Figure:
     """Session-status count bar chart - color-codes each bar by its status via `_STATUS_PALETTE`."""
-    colors = [_STATUS_PALETTE.get(s, "#94a3b8") for s in statuses]
+    colors = [_STATUS_PALETTE.get(s, "#6b7180") for s in statuses]
     return hbar_chart(statuses, counts, colors)
 
 
@@ -146,11 +160,14 @@ st.markdown("""
 
 load_css("styles/stats.css")
 
-nav_col, _ = st.columns([2, 8])
-with nav_col:
-    st.page_link("app.py", label="← Home")
+# Nav link: kept structurally identical to app.py's "Statistics" link —
+# same .block-container/[data-testid="stPageLink"] rules duplicated
+# verbatim in stats.css/home.css (see either file's "Shared top nav"
+# comment) — so both pages share the same box math, not just similar
+# values nudged into visual agreement.
+st.page_link("app.py", label="← Home")
 
-st.markdown('<h1 class="page-title">Statistics</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="page-title">Attack <span>Statistics</span></h1>', unsafe_allow_html=True)
 st.markdown(
     '<p class="page-subtitle">Attack effectiveness across all completed sessions</p>',
     unsafe_allow_html=True,
@@ -190,7 +207,7 @@ with tab_overview:
         err_col, info_col = st.columns([1, 3])
         err_col.metric("Crashed Sessions", data["error_sessions"])
         info_col.markdown(
-            '<p style="font-size:0.8rem;color:#64748b;margin-top:1rem;">'
+            '<p style="font-size:0.8rem;color:#6b7180;margin-top:1rem;">'
             "Sessions that ended due to a system error (e.g. Gemini API failure, "
             "Ollama timeout). Not counted as failed attacks — the attack loop never "
             "completed for these sessions."
@@ -242,7 +259,7 @@ with tab_models:
         with left:
             st.markdown('<p class="section-label">Attacks per Model</p>', unsafe_allow_html=True)
             st.plotly_chart(
-                hbar_chart(models, attacks, "#6366f1"),
+                hbar_chart(models, attacks, "#ffb020"),
                 use_container_width=True,
                 config=_NO_BAR,
             )
@@ -250,7 +267,7 @@ with tab_models:
         with right:
             st.markdown('<p class="section-label">Success Rate per Model</p>', unsafe_allow_html=True)
             st.plotly_chart(
-                hbar_chart(models, rates, "#10b981", value_suffix="%"),
+                hbar_chart(models, rates, "#6366f1", value_suffix="%"),
                 use_container_width=True,
                 config=_NO_BAR,
             )
@@ -340,11 +357,15 @@ with tab_intel:
         if failure_dist:
             st.markdown('<p class="section-label">Failure Type Distribution (all sessions)</p>',
                         unsafe_allow_html=True)
+            failure_labels = list(failure_dist.keys())
+            failure_colors = [
+                _CATEGORY_CYCLE[i % len(_CATEGORY_CYCLE)] for i in range(len(failure_labels))
+            ]
             st.plotly_chart(
                 hbar_chart(
-                    list(failure_dist.keys()),
+                    failure_labels,
                     list(failure_dist.values()),
-                    "#6366f1",
+                    failure_colors,
                 ),
                 use_container_width=True,
                 config=_NO_BAR,
@@ -358,7 +379,7 @@ with tab_intel:
             st.markdown('<p class="section-label">Technique Effectiveness per Model</p>',
                         unsafe_allow_html=True)
             st.markdown(
-                '<p style="font-size:0.8rem;color:#64748b;margin-bottom:0.5rem;">'
+                '<p style="font-size:0.8rem;color:#6b7180;margin-bottom:0.5rem;">'
                 "These priors are loaded at the start of each new session against the same model "
                 "to seed the UCB1 bandit's exploration order — techniques with higher historical "
                 "compliance are tried first."
