@@ -59,6 +59,22 @@
     align-items: center;
 }
 
+/* ── Nav link — byte-identical to stats.css's "← Home" link rule, so
+   "Statistics" here looks exactly the same (same font, size, color,
+   hover) and sits flush top-left the same way, no columns on either
+   page. */
+[data-testid="stPageLink"] {
+    font-family: var(--font-mono);
+}
+[data-testid="stPageLink"] p {
+    color: var(--txt-mut) !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.06em;
+}
+[data-testid="stPageLink"]:hover p {
+    color: var(--accent) !important;
+}
+
 /* ── Header block ── */
 .ax-eyebrow {
     font-family: var(--font-mono);
@@ -74,15 +90,11 @@
 .ax-eyebrow::before { content: "› "; opacity: 0.6; }
 
 
-/* ── Background ── */
+/* ── Background: matches stats.css exactly (same var(--bg-0) fallback,
+   same radial-glow .stApp rule above — no second override here). ── */
 body,
 [data-testid="stAppViewContainer"] {
-    background-color: #0a0a1a !important;
-}
-
-.stApp {
-    background: linear-gradient(135deg, #0a0a1a, #0f1629, #1a1a3e);
-    min-height: 100vh;
+    background-color: var(--bg-0) !important;
 }
 
 [data-testid="stSidebar"] {

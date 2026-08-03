@@ -307,9 +307,7 @@ else:
 
 if st.session_state.session_id is None:
 
-    _, nav_col = st.columns([8, 2])
-    with nav_col:
-        st.page_link("pages/stats.py", label="Statistics")
+    st.page_link("pages/stats.py", label="Statistics →")
 
     st.markdown(
         '<h1 class="page-title">Agent<span>Xploit</span></h1>', unsafe_allow_html=True

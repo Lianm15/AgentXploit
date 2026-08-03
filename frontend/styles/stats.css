@@ -1,82 +1,159 @@
-/* ── Background ── */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-0:        #07080c;
+    --bg-1:        #0b0d14;
+    --panel:       rgba(255, 255, 255, 0.035);
+    --panel-brd:   rgba(255, 255, 255, 0.09);
+    --txt-hi:      #f4f5f7;
+    --txt:         #c5c9d3;
+    --txt-mut:     #6b7180;
+    --accent:      #ffb020;   /* amber */
+    --accent-2:    #ff6b4a;   /* coral */
+    --accent-soft: rgba(255, 176, 32, 0.14);
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-body:    'Hanken Grotesk', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+}
+
+/* ── Background: same layered grid + radial glow as home ── */
 body,
 [data-testid="stAppViewContainer"] {
-    background-color: #0a0a1a !important;
+    background-color: var(--bg-0) !important;
 }
 
 .stApp {
-    background: linear-gradient(135deg, #0a0a1a, #0f1629, #1a1a3e);
+    background:
+        radial-gradient(900px 480px at 50% -8%, rgba(255, 176, 32, 0.10), transparent 60%),
+        radial-gradient(700px 500px at 85% 110%, rgba(255, 107, 74, 0.07), transparent 60%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-0) 70%);
     min-height: 100vh;
 }
 
+.stApp::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(circle at 50% 15%, #000 0%, transparent 78%);
+            mask-image: radial-gradient(circle at 50% 15%, #000 0%, transparent 78%);
+    pointer-events: none;
+    z-index: 0;
+}
+
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0a0a1a, #0f1629) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: linear-gradient(180deg, var(--bg-0), var(--bg-1)) !important;
+    border-right: 1px solid var(--panel-brd) !important;
 }
 
 [data-testid="stSidebar"] * {
-    color: #e2e8f0 !important;
+    color: var(--txt) !important;
 }
 
+/* ── Shared top nav (kept byte-for-byte identical in home.css) ──
+   .block-container here fixes max-width/margin/padding for the WHOLE
+   page, not just the nav link — this is deliberate: the nav's left edge
+   is only guaranteed to line up with home.css's nav if both pages'
+   containers use the same box, not two different widths nudged into
+   visual agreement with per-page offsets. Pure relative units (max-width
+   + auto margins + a breakpoint) — no fixed offsets, no positioning
+   tricks, no viewport-unit math. */
 .block-container {
-    max-width: 1100px !important;
+    max-width: 1120px !important;
     margin: 0 auto !important;
-    padding-top: 2rem !important;
-    padding-bottom: 3rem !important;
+    padding: 1.75rem 2rem 3rem !important;
+    position: relative;
+    z-index: 1;
+}
+
+@media (max-width: 640px) {
+    .block-container {
+        padding: 1.25rem 1rem 2rem !important;
+    }
+}
+
+[data-testid="stPageLink"] {
+    font-family: var(--font-mono);
+}
+[data-testid="stPageLink"] p {
+    color: var(--txt-mut) !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.06em;
+}
+[data-testid="stPageLink"]:hover p {
+    color: var(--accent) !important;
 }
 
 /* ── Typography ── */
 .page-title {
+    font-family: var(--font-display);
     text-align: center;
-    font-size: 2.2rem;
+    font-size: 2.6rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    background: linear-gradient(90deg, #ffffff 0%, #a5b4fc 100%);
+    color: var(--txt-hi);
+    margin: 0 0 0.35rem 0;
+}
+.page-title span {
+    background: linear-gradient(100deg, var(--accent), var(--accent-2));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin: 0 0 0.3rem 0;
 }
 
 .page-subtitle {
     text-align: center;
-    font-size: 0.9rem;
-    color: #94a3b8;
-    margin-bottom: 1.5rem;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    color: var(--txt-mut);
+    margin-bottom: 1.8rem;
 }
 
 /* ── General text ── */
 p, label, .stMarkdown p {
-    color: #e2e8f0 !important;
+    color: var(--txt) !important;
 }
 
 /* ── Tabs ── */
 [data-testid="stTabs"] [data-testid="stTab"] {
-    font-size: 0.88rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
     font-weight: 600;
-    letter-spacing: 0.02em;
-    color: #94a3b8 !important;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--txt-mut) !important;
     border-radius: 6px 6px 0 0;
     padding: 0.5rem 1.25rem;
 }
 
 [data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"] {
-    color: #a5b4fc !important;
-    border-bottom: 2px solid #6366f1;
+    color: var(--accent) !important;
+    border-bottom: 2px solid var(--accent);
 }
 
 /* ── Metric cards ── */
 [data-testid="stMetric"] {
-    background: rgba(99, 102, 241, 0.07);
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    background: var(--panel);
+    border: 1px solid var(--panel-brd);
+    border-top: 2px solid var(--accent-soft);
     border-radius: 10px;
-    padding: 0.75rem 1rem;
+    padding: 0.8rem 1rem;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+[data-testid="stMetric"]:hover {
+    border-top-color: var(--accent);
+    transform: translateY(-1px);
 }
 
 [data-testid="stMetricLabel"] p {
-    font-size: 0.68rem !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.66rem !important;
     font-weight: 600 !important;
-    color: #94a3b8 !important;
-    letter-spacing: 0.07em !important;
+    color: var(--txt-mut) !important;
+    letter-spacing: 0.09em !important;
     text-transform: uppercase !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -84,9 +161,10 @@ p, label, .stMarkdown p {
 }
 
 [data-testid="stMetricValue"] {
-    font-size: 1.45rem !important;
+    font-family: var(--font-mono) !important;
+    font-size: 1.4rem !important;
     font-weight: 700 !important;
-    color: #f1f5f9 !important;
+    color: var(--txt-hi) !important;
 }
 
 /* Tighter vertical gap between metric rows */
@@ -96,18 +174,21 @@ p, label, .stMarkdown p {
 
 /* ── Section labels ── */
 .section-label {
-    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
     font-weight: 600;
-    color: #94a3b8;
-    letter-spacing: 0.08em;
+    color: var(--txt-mut);
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     margin-bottom: 0.5rem;
 }
+.section-label::before { content: "› "; color: var(--accent); opacity: 0.75; }
 
 /* ── Dataframes ── */
 [data-testid="stDataFrame"] {
     border-radius: 10px;
     overflow: hidden;
+    border: 1px solid var(--panel-brd);
 }
 
 /* ── Charts ── */
@@ -122,17 +203,18 @@ p, label, .stMarkdown p {
 [data-testid="stDataFrame"] .ag-center-cols-container,
 [data-testid="stDataFrame"] .ag-pinned-left-cols-container,
 [data-testid="stDataFrame"] .ag-body-viewport {
-    background: #0f1629 !important;
+    background: var(--bg-1) !important;
 }
 
 [data-testid="stDataFrame"] .ag-header,
 [data-testid="stDataFrame"] .ag-header-row {
-    background: #0a0e1f !important;
-    border-bottom: 1px solid rgba(99, 102, 241, 0.2) !important;
+    background: var(--bg-0) !important;
+    border-bottom: 1px solid var(--accent-soft) !important;
 }
 
 [data-testid="stDataFrame"] .ag-header-cell-text {
-    color: #94a3b8 !important;
+    font-family: var(--font-mono) !important;
+    color: var(--txt-mut) !important;
     font-size: 11px !important;
     font-weight: 600 !important;
     letter-spacing: 0.06em !important;
@@ -145,27 +227,42 @@ p, label, .stMarkdown p {
 }
 
 [data-testid="stDataFrame"] .ag-cell {
-    color: #e2e8f0 !important;
+    color: var(--txt) !important;
+    font-family: var(--font-body) !important;
 }
 
 [data-testid="stDataFrame"] .ag-row:hover .ag-cell,
 [data-testid="stDataFrame"] .ag-row-hover .ag-cell {
-    background: rgba(99, 102, 241, 0.08) !important;
+    background: var(--accent-soft) !important;
 }
 
 [data-testid="stDataFrame"] .ag-row-selected .ag-cell,
 [data-testid="stDataFrame"] .ag-row-selected:hover .ag-cell {
-    background: rgba(99, 102, 241, 0.15) !important;
-    color: #f1f5f9 !important;
+    background: rgba(255, 176, 32, 0.18) !important;
+    color: var(--txt-hi) !important;
 }
 
 [data-testid="stDataFrame"] .ag-cell-focus {
-    border-color: rgba(99, 102, 241, 0.4) !important;
+    border-color: var(--accent) !important;
 }
 
 [data-testid="stDataFrame"] ::-webkit-scrollbar { width: 5px; height: 5px; }
 [data-testid="stDataFrame"] ::-webkit-scrollbar-track { background: transparent; }
 [data-testid="stDataFrame"] ::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.3);
+    background: var(--accent-soft);
     border-radius: 4px;
 }
+
+/* ── Expanders (Intelligence tab) ── */
+[data-testid="stExpander"] {
+    background: var(--panel) !important;
+    border: 1px solid var(--panel-brd) !important;
+    border-radius: 10px !important;
+}
+[data-testid="stExpander"] summary {
+    font-family: var(--font-mono) !important;
+    font-size: 0.82rem !important;
+}
+
+/* ── Alerts ── */
+div[data-testid="stAlert"] { border-radius: 10px !important; }
