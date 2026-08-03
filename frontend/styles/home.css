@@ -167,60 +167,77 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     color: var(--txt) !important;
 }
 
-/* ── Inputs (shared) ── */
-div[data-baseweb="select"] > div,
-div[data-baseweb="textarea"],
-div[data-baseweb="base-input"],
-.stNumberInput div[data-baseweb="input"] {
-    background: var(--field) !important;
+/* ── Inputs: Target Model, Success Criteria, Maximum Attempts, Attack Mode ──
+   Streamlit exposes stable data-testid hooks for each widget's outer
+   container; style those + the inner input/textarea elements directly. */
+div[data-testid="stSelectbox"] div[role="group"],
+div[data-testid="stTextAreaRootElement"],
+div[data-testid="stNumberInputContainer"] {
+    background: #0f1629 !important;
     border-radius: 10px !important;
-    border: 1px solid var(--field-brd) !important;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
 }
 
-div[data-baseweb="select"] > div:focus-within,
-div[data-baseweb="textarea"]:focus-within,
-.stNumberInput div[data-baseweb="input"]:focus-within {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 0 3px var(--accent-soft) !important;
+div[data-testid="stSelectbox"] div[role="group"]:hover,
+div[data-testid="stTextAreaRootElement"]:hover,
+div[data-testid="stNumberInputContainer"]:hover {
+    border-color: rgba(129, 140, 248, 0.5) !important;
 }
 
-/* Text inside every input is light & readable (fixes the black-on-dark bug) */
-input,
-textarea,
-div[data-baseweb="select"] *,
-.stTextArea textarea,
-.stNumberInput input {
-    color: var(--txt-hi) !important;
+div[data-testid="stSelectbox"] div[role="group"]:focus-within,
+div[data-testid="stTextAreaRootElement"]:focus-within,
+div[data-testid="stNumberInputContainer"]:focus-within {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.18) !important;
+}
+
+/* Inner input/textarea/select text - light & readable on the dark field */
+div[data-testid="stSelectbox"] input,
+div[data-testid="stTextAreaRootElement"] textarea,
+div[data-testid="stNumberInputContainer"] input {
+    background: transparent !important;
+    color: #f1f5f9 !important;
+    -webkit-text-fill-color: #f1f5f9 !important;
     font-family: var(--font-body) !important;
-    -webkit-text-fill-color: var(--txt-hi) !important;
+    caret-color: #a5b4fc !important;
 }
-textarea { line-height: 1.55 !important; }
-::placeholder { color: var(--txt-mut) !important; opacity: 1; }
+div[data-testid="stTextAreaRootElement"] textarea { line-height: 1.55 !important; }
 
-/* Dropdown popover menu → dark, matches the theme */
-div[data-baseweb="popover"] ul[role="listbox"],
-div[data-baseweb="popover"] [role="listbox"] {
+div[data-testid="stSelectbox"] ::placeholder,
+div[data-testid="stTextAreaRootElement"] ::placeholder,
+div[data-testid="stNumberInputContainer"] ::placeholder {
+    color: #7d8698 !important;
+    opacity: 1 !important;
+}
+
+/* Target Model / Attack Mode dropdown popover panel */
+div[data-testid="stSelectboxVirtualDropdown"] {
     background: #12141c !important;
-    border: 1px solid var(--field-brd) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
     border-radius: 10px !important;
 }
-li[role="option"] { color: var(--txt) !important; }
-li[role="option"]:hover,
-li[role="option"][aria-selected="true"] {
-    background: var(--accent-soft) !important;
-    color: var(--txt-hi) !important;
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"] {
+    background: transparent !important;
+    color: #c5c9d3 !important;
+}
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"]:hover,
+div[data-testid="stSelectboxVirtualDropdown"] [role="option"][aria-selected="true"] {
+    background: rgba(129, 140, 248, 0.18) !important;
+    color: #f1f5f9 !important;
 }
 
-/* Number-input +/- steppers */
+/* Maximum Attempts +/- steppers */
 .stNumberInput button {
     background: rgba(255, 255, 255, 0.05) !important;
-    border-left: 1px solid var(--field-brd) !important;
-    border-color: #07080c;
-    color: var(--txt) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: #94a3b8 !important;
     font-size: 0.95rem;
-    color: #94a3b8;
-    margin-bottom: 2.4rem;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+.stNumberInput button:hover {
+    background: rgba(129, 140, 248, 0.18) !important;
+    color: #a5b4fc !important;
 }
 
 .field-label {
@@ -242,67 +259,6 @@ label, p, .stMarkdown p {
     color: #f1f5f9 !important;
 }
 
-/* ── Form inputs — outer container ── */
-div[data-baseweb="select"] > div,
-div[data-baseweb="textarea"] > div,
-div[data-baseweb="input"] > div,
-div[data-baseweb="number-input"] > div {
-    background: #0f1629 !important;
-    border-radius: 10px !important;
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
-}
-
-div[data-baseweb="select"] > div:focus-within,
-div[data-baseweb="textarea"] > div:focus-within,
-div[data-baseweb="input"] > div:focus-within,
-div[data-baseweb="number-input"] > div:focus-within {
-    border-color: rgba(99, 102, 241, 0.7) !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
-}
-
-/* Inner input/textarea elements */
-input, textarea {
-    background: transparent !important;
-    color: #f1f5f9 !important;
-    caret-color: #a5b4fc !important;
-}
-
-/* Select box — all inner text */
-div[data-baseweb="select"] span,
-div[data-baseweb="select"] div,
-div[data-baseweb="select"] * {
-    background: transparent !important;
-    color: #f1f5f9 !important;
-}
-
-/* Dropdown popover panel */
-[data-baseweb="popover"],
-[data-baseweb="popover"] > div,
-ul[data-baseweb="menu"],
-[data-baseweb="menu"] {
-    background: #1a2540 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 10px !important;
-}
-
-li[role="option"] {
-    background: transparent !important;
-    color: #e2e8f0 !important;
-}
-
-li[role="option"]:hover,
-li[role="option"][aria-selected="true"] {
-    background: rgba(99, 102, 241, 0.2) !important;
-    color: #f1f5f9 !important;
-}
-
-::placeholder {
-    color: #64748b !important;
-    opacity: 1 !important;
-}
-.stNumberInput button:hover { color: var(--accent) !important; }
-
-
 div[data-testid="stButton"] {
     display: flex !important;
     justify-content: center !important;
@@ -314,19 +270,6 @@ div[data-testid="stButton"] {
     justify-content: center;
     width: 100%;
     margin-top: 1.2rem;
-}
-
-textarea::placeholder {
-    color: #6b7180 !important;
-}
-
-.stTextArea textarea {
-    background: rgba(255,255,255,0.04) !important;
-    border-radius: 10px !important;
-}
-
-.stTextArea textarea:focus {
-    color: #f4f5f7 !important;
 }
 
 /* ── Primary CTA (st.button) ── */

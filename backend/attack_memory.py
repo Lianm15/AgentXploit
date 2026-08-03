@@ -1,4 +1,4 @@
-from database import get_connection
+from database import db_cursor
 
 
 class AttackMemory:
@@ -19,22 +19,20 @@ class AttackMemory:
         The HAVING COUNT(*) >= 2 guard filters single-attempt noise so that one
         lucky or unlucky result does not distort the prior.
         """
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT th.technique,
-                   ROUND(AVG(th.compliance_score), 4) AS avg_compliance
-            FROM technique_history th
-            JOIN sessions s ON th.session_id = s.session_id
-            WHERE s.target_model = ?
-            GROUP BY th.technique
-            HAVING COUNT(*) >= 2
-            """,
-            (target_model,),
-        )
-        rows = cursor.fetchall()
-        conn.close()
+        with db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT th.technique,
+                       ROUND(AVG(th.compliance_score), 4) AS avg_compliance
+                FROM technique_history th
+                JOIN sessions s ON th.session_id = s.session_id
+                WHERE s.target_model = ?
+                GROUP BY th.technique
+                HAVING COUNT(*) >= 2
+                """,
+                (target_model,),
+            )
+            rows = cursor.fetchall()
         return {row["technique"]: row["avg_compliance"] for row in rows}
 
     def get_technique_effectiveness(self) -> dict:
@@ -43,24 +41,22 @@ class AttackMemory:
         Shape: {target_model: {technique: {avg_compliance, total_tries, sessions_used}}}
         Used by the Intelligence dashboard tab.
         """
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT
-                s.target_model,
-                th.technique,
-                ROUND(AVG(th.compliance_score), 4) AS avg_compliance,
-                COUNT(*)                            AS total_tries,
-                COUNT(DISTINCT th.session_id)       AS sessions_used
-            FROM technique_history th
-            JOIN sessions s ON th.session_id = s.session_id
-            GROUP BY s.target_model, th.technique
-            ORDER BY s.target_model, avg_compliance DESC
-            """
-        )
-        rows = cursor.fetchall()
-        conn.close()
+        with db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    s.target_model,
+                    th.technique,
+                    ROUND(AVG(th.compliance_score), 4) AS avg_compliance,
+                    COUNT(*)                            AS total_tries,
+                    COUNT(DISTINCT th.session_id)       AS sessions_used
+                FROM technique_history th
+                JOIN sessions s ON th.session_id = s.session_id
+                GROUP BY s.target_model, th.technique
+                ORDER BY s.target_model, avg_compliance DESC
+                """
+            )
+            rows = cursor.fetchall()
 
         result: dict = {}
         for row in rows:
@@ -80,17 +76,15 @@ class AttackMemory:
         Shape: {failure_type: count}
         Used by the Intelligence dashboard tab.
         """
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT failure_type, COUNT(*) AS count
-            FROM messages
-            WHERE failure_type IS NOT NULL
-            GROUP BY failure_type
-            ORDER BY count DESC
-            """
-        )
-        rows = cursor.fetchall()
-        conn.close()
+        with db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT failure_type, COUNT(*) AS count
+                FROM messages
+                WHERE failure_type IS NOT NULL
+                GROUP BY failure_type
+                ORDER BY count DESC
+                """
+            )
+            rows = cursor.fetchall()
         return {row["failure_type"]: row["count"] for row in rows}
