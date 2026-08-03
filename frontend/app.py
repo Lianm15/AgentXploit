@@ -11,7 +11,7 @@ import re
 
 def load_css(file):
     """Inject a local CSS file into the page - Streamlit has no native stylesheet linking."""
-    with open(file) as f:
+    with open(file, encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
@@ -149,6 +149,51 @@ def _score_tip(score: float) -> str:
         return f"{score:.2f} — Substantial delivery. Missing key specifics or completeness."
     return f"{score:.2f} — Near or full delivery. The objective is largely or fully satisfied."
 
+
+# ── Drift Mode Judge badges (colored [TAG] messages from drift_mode.py) ────────
+
+_JUDGE_TAG_COLORS = {
+    # progress trend tags (from _format_progress_message)
+    "PROGRESS:closer":  "#22c55e",   # green  — attack working
+    "PROGRESS:further": "#ef4444",   # red    — target resisting more
+    "PROGRESS:same":    "#94a3b8",   # gray   — no change
+    "PROGRESS:unknown": "#f59e0b",   # amber  — parsing fallback
+    # strict-check outcome tags
+    "CHECK:success": "#22c55e",      # green  — strict judge confirmed success
+    "CHECK:pending": "#64748b",      # muted gray — strict judge, not yet
+    # refusal-handling tags
+    "REFUSAL":         "#f97316",    # orange — backtracking after a refusal
+    "STRATEGY_SWITCH":  "#a855f7",   # purple — abandoning the current angle
+}
+
+
+def _render_judge_message(content: str) -> str:
+    """
+    Detects a leading [TAG] emitted by drift_mode.py and renders it as a
+    compact colored-dot badge, matching the visual language already used by
+    _scorer_badge_html (colored dot + label) elsewhere in this app, rather
+    than a full-width block. Messages without a recognized tag pass through
+    unchanged.
+    """
+    match = re.match(r"^\[([A-Za-z_:]+)\]\s*(.*)", content)
+    if not match:
+        return content
+
+    tag, rest = match.group(1), match.group(2)
+    color = _JUDGE_TAG_COLORS.get(tag)
+    if color is None:
+        return content
+
+    return (
+        f'<div style="display:inline-flex;align-items:center;gap:7px;'
+        f'background:{color}12;border:1px solid {color}33;'
+        f'border-radius:6px;padding:5px 12px;margin-bottom:4px;">'
+        f'<span style="width:6px;height:6px;border-radius:50%;background:{color};'
+        f'flex-shrink:0;"></span>'
+        f'<span style="font-family:\'Hanken Grotesk\',sans-serif;font-size:13px;'
+        f'font-weight:600;color:{color};">{html.escape(rest)}</span>'
+        f'</div>'
+    )
 
 def _intel_table_html(history: list) -> str:
     """Render the per-attempt technique/failure/score table as raw HTML.
@@ -543,6 +588,8 @@ else:
                     name, avatar_text = "Judge", "J"
 
                 content = normalize_message_content(raw_content)
+                if sender == "judge":
+                    content = _render_judge_message(content)
 
                 # ── per-message intelligence overlays ─────────────────────────
                 technique    = msg.get("technique")
