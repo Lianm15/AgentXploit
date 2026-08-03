@@ -11,7 +11,7 @@ import re
 
 def load_css(file):
     """Inject a local CSS file into the page - Streamlit has no native stylesheet linking."""
-    with open(file) as f:
+    with open(file, encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
