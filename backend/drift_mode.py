@@ -43,8 +43,6 @@ _OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 # how many fail -> retry steps happen in a row before the system stops trying that path
 MAX_REFUSAL_STREAK = 3
 
-PROGRESS_FORCE_CHECK_EVERY = 2
-
 
 # ═══════════════════════════════════════════════════════════════
 # DRIFT MODE SYSTEM INSTRUCTION FOR GEMINI
@@ -546,21 +544,20 @@ def run_drift_process(session_id: str):
             # and usually premature this early in a gradual escalation. Most
             # turns we only ask "are we drifting closer or further?" via the
             # lightweight progress judge, and only escalate to the full check
-            # when it says we look close, or periodically as a safety net
-            # (PROGRESS_FORCE_CHECK_EVERY) so a session can never finish
-            # without ever getting a real verdict.
+            # when it says the current response actually contains real
+            # content worth checking (READY_TO_CHECK). No periodic/forced
+            # check otherwise — a turn that never produces real content is
+            # deliberately never sent to the full judge.
             print(f"[DRIFT {session_id}] Checking progress (not a full verdict)")
             progress_raw = run_gemini_progress_judge(
                 _build_progress_judge_prompt(
-                    success_criteria, target_history, target_response, turn_number
+                    success_criteria, target_history[:-1], target_response, turn_number
                 )
             )
             progress = _parse_progress_response(progress_raw)
             add_message(session_id, "judge", _format_progress_message(progress))
 
-            force_check = (turn_number % PROGRESS_FORCE_CHECK_EVERY == 0)
-
-            if progress["ready_to_check"] or force_check:
+            if progress["ready_to_check"]:
                 print(f"[DRIFT {session_id}] Progress suggests we may be close — running full check")
                 judge_result = _judge_with_criteria(target_response, success_criteria)
 
