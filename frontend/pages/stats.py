@@ -59,6 +59,30 @@ _STATUS_PALETTE = {
     "initialized":   "#6b7180",
 }
 
+# Client-facing labels for raw DB status values. "failed" only ever means the
+# attack loop itself crashed (system/API error) - never that the test simply
+# didn't succeed - so it reads as "Not Finished" rather than the harsher/more
+# alarming "Failed" or "Crashed".
+_STATUS_LABELS = {
+    "success_found": "Successful",
+    "finished":      "Finished",
+    "running":       "Running",
+    "paused":        "Paused",
+    "failed":        "Not Finished",
+    "initialized":   "Initialized",
+}
+
+# Client-facing labels for classify_zone()'s raw zone_a/b/c/d/ambiguous labels
+# (backend/strategy_controller.py) - short, jargon-free descriptions of what
+# actually happened on that attempt instead of an opaque "Zone A/B/C/D" name.
+_OUTCOME_LABELS = {
+    "zone_a":    "Near Full Bypass",
+    "zone_b":    "Bypassed, No Content",
+    "zone_c":    "Fully Blocked",
+    "zone_d":    "Leaked Despite Refusal",
+    "ambiguous": "Inconclusive",
+}
+
 
 def donut_chart(success: int, failed: int, total: int) -> go.Figure:
     """Success/failure ratio donut with the session total centered inside the hole."""
@@ -136,9 +160,11 @@ def hbar_chart(labels: list, values: list, color, value_suffix: str = "", height
 
 
 def status_hbar_chart(statuses: list, counts: list) -> go.Figure:
-    """Session-status count bar chart - color-codes each bar by its status via `_STATUS_PALETTE`."""
+    """Session-status count bar chart - color-codes each bar by its raw status via
+    `_STATUS_PALETTE`, but labels each bar with the client-facing name from `_STATUS_LABELS`."""
     colors = [_STATUS_PALETTE.get(s, "#6b7180") for s in statuses]
-    return hbar_chart(statuses, counts, colors)
+    labels = [_STATUS_LABELS.get(s, s.replace("_", " ").title()) for s in statuses]
+    return hbar_chart(labels, counts, colors)
 
 
 # ── Page setup ────────────────────────────────────────────────────────────────
@@ -205,12 +231,12 @@ with tab_overview:
         st.write("")
         st.markdown('<p class="section-label">Operational</p>', unsafe_allow_html=True)
         err_col, info_col = st.columns([1, 3])
-        err_col.metric("Crashed Sessions", data["error_sessions"])
+        err_col.metric("Not Finished", data["error_sessions"])
         info_col.markdown(
             '<p style="font-size:0.8rem;color:#6b7180;margin-top:1rem;">'
-            "Sessions that ended due to a system error (e.g. Gemini API failure, "
-            "Ollama timeout). Not counted as failed attacks — the attack loop never "
-            "completed for these sessions."
+            "Sessions that couldn't finish because of a temporary system issue "
+            "(e.g. a connection or API hiccup) — not because the attack was tried "
+            "and came up unsuccessful. These aren't counted in the success rate."
             "</p>",
             unsafe_allow_html=True,
         )
@@ -306,8 +332,15 @@ with tab_sessions:
 
         with right:
             st.markdown('<p class="section-label">Counts</p>', unsafe_allow_html=True)
+            status_counts = [
+                {
+                    "status": _STATUS_LABELS.get(r["status"], r["status"].replace("_", " ").title()),
+                    "count": r["count"],
+                }
+                for r in data["status_distribution"]
+            ]
             st.dataframe(
-                data["status_distribution"],
+                status_counts,
                 column_config={"status": "Status", "count": "Count"},
                 use_container_width=True,
                 hide_index=True,
@@ -353,11 +386,14 @@ with tab_intel:
         effectiveness = intel.get("technique_effectiveness", {})
         failure_dist  = intel.get("failure_distribution", {})
 
-        # ── Failure type distribution ──────────────────────────────────────────
+        # ── Attempt outcome distribution ────────────────────────────────────────
         if failure_dist:
-            st.markdown('<p class="section-label">Failure Type Distribution (all sessions)</p>',
+            st.markdown('<p class="section-label">Attempt Outcome Breakdown (all sessions)</p>',
                         unsafe_allow_html=True)
-            failure_labels = list(failure_dist.keys())
+            outcome_keys = list(failure_dist.keys())
+            failure_labels = [
+                _OUTCOME_LABELS.get(k, k.replace("_", " ").title()) for k in outcome_keys
+            ]
             failure_colors = [
                 _CATEGORY_CYCLE[i % len(_CATEGORY_CYCLE)] for i in range(len(failure_labels))
             ]
@@ -371,7 +407,7 @@ with tab_intel:
                 config=_NO_BAR,
             )
         else:
-            st.info("No failure type data yet. Run at least one attack session.")
+            st.info("No attempt outcome data yet. Run at least one attack session.")
 
         # ── Technique effectiveness per model ──────────────────────────────────
         if effectiveness:
@@ -380,9 +416,8 @@ with tab_intel:
                         unsafe_allow_html=True)
             st.markdown(
                 '<p style="font-size:0.8rem;color:#6b7180;margin-bottom:0.5rem;">'
-                "These priors are loaded at the start of each new session against the same model "
-                "to seed the UCB1 bandit's exploration order — techniques with higher historical "
-                "compliance are tried first."
+                "These results carry over into each new session against the same model — "
+                "techniques that performed best historically are tried first."
                 "</p>",
                 unsafe_allow_html=True,
             )
@@ -391,7 +426,7 @@ with tab_intel:
                 with st.expander(f"Model: {model}", expanded=True):
                     rows = [
                         {
-                            "Technique":       tech,
+                            "Technique":       tech.replace("_", " ").title(),
                             "Avg Compliance":  round(stats["avg_compliance"], 3),
                             "Total Tries":     stats["total_tries"],
                             "Sessions Used":   stats["sessions_used"],
