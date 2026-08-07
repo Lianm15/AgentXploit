@@ -463,17 +463,19 @@ if st.session_state.session_id is None:
 
         else:
 
-            session_id = client.initialize(
+            init_result = client.initialize(
                 selected_model,
                 success_criteria,
                 max_attempts,
                 mode=selected_mode.lower(),
             )
+            session_id = init_result["session_id"]
 
             client.start_attack(session_id)
 
             st.session_state.session_id = session_id
             st.session_state.target_model = selected_model
+            st.session_state.success_criteria = init_result["success_criteria"]
             st.session_state.start_time = time.time()
             st.session_state.end_time = None
 
@@ -551,6 +553,12 @@ else:
                 st.markdown('<div style="height:38px;"></div>', unsafe_allow_html=True)
 
     _status_bar()
+
+    refined_criteria = st.session_state.get("success_criteria")
+    if refined_criteria:
+        with st.expander("Success criteria (refined by Gemini)"):
+            st.write(refined_criteria)
+
     st.divider()
 
     # ── Fragment 2: chat transcript (updates every second) ─────────────────────
