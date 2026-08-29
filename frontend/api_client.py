@@ -35,6 +35,9 @@ class ApiClient:
         return self._request("GET", "/api/models").json()["models"]
 
     def initialize(self, target_model, success_criteria, max_attempts, mode="standard"):
+        """Returns {"session_id", "success_criteria"} - success_criteria is the
+        Gemini-refined version actually stored and used for the session, which may
+        differ from what was submitted."""
         res = self._request(
             "POST",
             "/api/initialize",
@@ -45,7 +48,7 @@ class ApiClient:
                 "mode": mode,
             },
         )
-        return res.json()["session_id"]
+        return res.json()
 
     def start_attack(self, session_id):
         self._request("POST", f"/api/{session_id}/start")

@@ -7,7 +7,7 @@ Gemini prompt helpers, and tool-call bookkeeping (record_tool_calls) defined her
 
 from pydantic import BaseModel
 from typing import Optional, List
-from gemini import run_gemini_attack, GeminiAttackSession, JudgeResult
+from gemini import run_gemini_attack, GeminiAttackSession, JudgeResult, run_gemini_refine_criteria
 from database import db_cursor, save_technique_record
 from strategy_controller import AttackStrategyController, TECHNIQUE_INSTRUCTIONS, classify_zone
 from attack_memory import AttackMemory
@@ -54,6 +54,7 @@ class InitializeResponse(BaseModel):
     """Response payload for session initialization"""
 
     session_id: str
+    success_criteria: str
 
 
 class HealthStatus(BaseModel):
@@ -129,17 +130,23 @@ class StatsResponse(BaseModel):
 def initialize(
     target_model: str, success_criteria: str, max_attempts: int, mode: str = "standard"
 ) -> InitializeResponse:
-    """Create a new session row (mode 'standard' or 'drift') and return its id."""
+    """Create a new session row (mode 'standard' or 'drift') and return its id.
+
+    The operator's raw success criteria is first rewritten by Gemini into a precise,
+    checkable spec (run_gemini_refine_criteria) - the refined version, not the raw
+    input, is what gets stored and used for the rest of the session (attacker prompt
+    building and judging)."""
     session_id = str(uuid.uuid4())
+    refined_criteria = run_gemini_refine_criteria(success_criteria)
 
     with db_cursor() as cursor:
         cursor.execute(
             """INSERT INTO sessions (session_id, target_model, success_criteria, max_attempts, mode)
                VALUES (?, ?, ?, ?, ?)""",
-            (session_id, target_model, success_criteria, max_attempts, mode),
+            (session_id, target_model, refined_criteria, max_attempts, mode),
         )
 
-    return InitializeResponse(session_id=session_id)
+    return InitializeResponse(session_id=session_id, success_criteria=refined_criteria)
 
 def add_message(
     session_id: str,
